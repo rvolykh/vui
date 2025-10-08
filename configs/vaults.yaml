@@ -1,0 +1,25 @@
+vaults:
+  default:
+    address: "http://localhost:8200"
+    auth_method: "token"
+    token: ""
+    namespace: ""
+  
+  production:
+    address: "https://vault-prod.company.com"
+    auth_method: "token"
+    token: "${VAULT_TOKEN_PROD}"
+    namespace: "production"
+  
+  staging:
+    address: "https://vault-staging.company.com"
+    auth_method: "ldap"
+    username: "${VAULT_USERNAME}"
+    password: "${VAULT_PASSWORD}"
+    namespace: "staging"
+  
+  development:
+    address: "http://localhost:8200"
+    auth_method: "token"
+    token: "dev-token"
+    namespace: "dev"

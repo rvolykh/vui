@@ -1,0 +1,25 @@
+app:
+  default_vault: "default"
+  theme: "dark"
+  refresh_interval: 30
+  max_secret_size: 10240
+  clipboard_timeout: 5
+
+vault:
+  address: "http://localhost:8200"
+  auth_method: "token"
+  token: ""
+  namespace: ""
+  default_vault: "default"
+  profiles:
+    default:
+      address: "http://localhost:8200"
+      auth_method: "token"
+      token: ""
+      namespace: ""
+
+ui:
+  show_hidden_secrets: false
+  confirm_deletions: true
+  auto_refresh: true
+  tree_width: 40
