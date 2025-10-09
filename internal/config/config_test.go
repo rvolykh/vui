@@ -18,8 +18,8 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, "default", config.App.DefaultVault)
 	assert.Equal(t, "dark", config.App.Theme)
 	assert.Equal(t, 30, config.App.RefreshInterval)
-	assert.Equal(t, "http://localhost:8200", config.Vault.Address)
-	assert.Equal(t, "token", config.Vault.AuthMethod)
+	assert.Equal(t, "http://localhost:8200", config.Vaults["default"].Address)
+	assert.Equal(t, "token", config.Vaults["default"].AuthMethod)
 }
 
 func TestLoadWithEnvVars(t *testing.T) {
@@ -38,9 +38,13 @@ func TestLoadWithEnvVars(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Verify environment variable overrides
-	assert.Equal(t, "https://vault.example.com", config.Vault.Address)
-	assert.Equal(t, "test-token", config.Vault.Token)
-	assert.Equal(t, "test-namespace", config.Vault.Namespace)
+	defaultVault := config.App.DefaultVault
+	if defaultVault == "" {
+		defaultVault = "default"
+	}
+	assert.Equal(t, "https://vault.example.com", config.Vaults[defaultVault].Address)
+	assert.Equal(t, "test-token", config.Vaults[defaultVault].Token)
+	assert.Equal(t, "test-namespace", config.Vaults[defaultVault].Namespace)
 }
 
 func TestConfigSave(t *testing.T) {
@@ -49,9 +53,11 @@ func TestConfigSave(t *testing.T) {
 			DefaultVault: "test",
 			Theme:        "light",
 		},
-		Vault: VaultConfig{
-			Address:    "https://test.vault.com",
-			AuthMethod: "token",
+		Vaults: map[string]VaultProfile{
+			"default": {
+				Address:    "https://test.vault.com",
+				AuthMethod: "token",
+			},
 		},
 	}
 

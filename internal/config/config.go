@@ -10,9 +10,9 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	App   AppConfig   `mapstructure:"app"`
-	Vault VaultConfig `mapstructure:"vault"`
-	UI    UIConfig    `mapstructure:"ui"`
+	App    AppConfig               `mapstructure:"app"`
+	UI     UIConfig                `mapstructure:"ui"`
+	Vaults map[string]VaultProfile `mapstructure:"vaults"`
 }
 
 // AppConfig contains general application settings
@@ -22,16 +22,6 @@ type AppConfig struct {
 	RefreshInterval  int    `mapstructure:"refresh_interval"`
 	MaxSecretSize    int    `mapstructure:"max_secret_size"`
 	ClipboardTimeout int    `mapstructure:"clipboard_timeout"`
-}
-
-// VaultConfig contains vault connection settings
-type VaultConfig struct {
-	Address      string                  `mapstructure:"address"`
-	Token        string                  `mapstructure:"token"`
-	AuthMethod   string                  `mapstructure:"auth_method"`
-	Namespace    string                  `mapstructure:"namespace"`
-	Profiles     map[string]VaultProfile `mapstructure:"profiles"`
-	DefaultVault string                  `mapstructure:"default_vault"`
 }
 
 // VaultProfile represents a vault connection profile
@@ -140,28 +130,36 @@ func setDefaults() {
 	viper.SetDefault("app.max_secret_size", 10240)
 	viper.SetDefault("app.clipboard_timeout", 5)
 
-	// Vault defaults
-	viper.SetDefault("vault.address", "http://localhost:8200")
-	viper.SetDefault("vault.auth_method", "token")
-	viper.SetDefault("vault.namespace", "")
-
 	// UI defaults
 	viper.SetDefault("ui.show_hidden_secrets", false)
 	viper.SetDefault("ui.confirm_deletions", true)
 	viper.SetDefault("ui.auto_refresh", true)
 	viper.SetDefault("ui.tree_width", 40)
+
+	// Vaults defaults
+	viper.SetDefault("vaults.default.address", "http://localhost:8200")
+	viper.SetDefault("vaults.default.auth_method", "token")
+	viper.SetDefault("vaults.default.namespace", "")
 }
 
 // overrideWithEnvVars overrides configuration with environment variables
 func overrideWithEnvVars(config *Config) {
-	if addr := os.Getenv("VAULT_ADDR"); addr != "" {
-		config.Vault.Address = addr
+	defaultVaultName := config.App.DefaultVault
+	if defaultVaultName == "" {
+		defaultVaultName = "default"
 	}
-	if token := os.Getenv("VAULT_TOKEN"); token != "" {
-		config.Vault.Token = token
-	}
-	if namespace := os.Getenv("VAULT_NAMESPACE"); namespace != "" {
-		config.Vault.Namespace = namespace
+
+	if defaultProfile, ok := config.Vaults[defaultVaultName]; ok {
+		if addr := os.Getenv("VAULT_ADDR"); addr != "" {
+			defaultProfile.Address = addr
+		}
+		if token := os.Getenv("VAULT_TOKEN"); token != "" {
+			defaultProfile.Token = token
+		}
+		if namespace := os.Getenv("VAULT_NAMESPACE"); namespace != "" {
+			defaultProfile.Namespace = namespace
+		}
+		config.Vaults[defaultVaultName] = defaultProfile
 	}
 }
 
@@ -176,8 +174,8 @@ func (c *Config) Save() error {
 
 	// Convert config back to viper format for saving
 	viper.Set("app", c.App)
-	viper.Set("vault", c.Vault)
 	viper.Set("ui", c.UI)
+	viper.Set("vaults", c.Vaults)
 
 	return viper.WriteConfigAs(configFile)
 }

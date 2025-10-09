@@ -11,6 +11,7 @@ import (
 
 // ConnectionStatus represents the status of a vault connection
 type ConnectionStatus struct {
+	Connecting  bool      `json:"connecting"`
 	Connected   bool      `json:"connected"`
 	Address     string    `json:"address"`
 	Sealed      bool      `json:"sealed"`
@@ -38,29 +39,50 @@ func NewConnectionManager(logger *logrus.Logger) *ConnectionManager {
 	}
 }
 
-// AddConnection adds a new vault connection
-func (cm *ConnectionManager) AddConnection(name string, client *Client) error {
+// AddConnection adds a new vault connection and sets its status to connecting
+func (cm *ConnectionManager) AddConnection(name string, client *Client) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	// Test the connection (but don't fail if it's not available)
-	status, err := cm.testConnection(client)
-	if err != nil {
-		cm.logger.Warnf("Failed to connect to vault '%s': %v", name, err)
-		// Create a status indicating the connection failed
-		status = &ConnectionStatus{
-			Connected: false,
-			Address:   client.apiClient.Address(),
-			Error:     err.Error(),
-			LastCheck: time.Now(),
-		}
+	cm.clients[name] = client
+	cm.status[name] = &ConnectionStatus{
+		Connecting: true,
+		Address:    client.apiClient.Address(),
+		LastCheck:  time.Now(),
+	}
+}
+
+// TestConnectionAsync tests a vault connection asynchronously
+func (cm *ConnectionManager) TestConnectionAsync(name string) {
+	cm.mutex.RLock()
+	client, exists := cm.clients[name]
+	cm.mutex.RUnlock()
+
+	if !exists {
+		return
 	}
 
-	cm.clients[name] = client
-	cm.status[name] = status
-	cm.logger.Infof("Added vault connection: %s (connected: %v)", name, status.Connected)
+	go func() {
+		status, err := cm.testConnection(client)
+		if err != nil {
+			cm.logger.Warnf("Failed to connect to vault '%s': %v", name, err)
+			cm.mutex.Lock()
+			if existingStatus, ok := cm.status[name]; ok {
+				existingStatus.Connecting = false
+				existingStatus.Connected = false
+				existingStatus.Error = err.Error()
+				existingStatus.LastCheck = time.Now()
+			}
+			cm.mutex.Unlock()
+			return
+		}
 
-	return nil
+		cm.mutex.Lock()
+		cm.status[name] = status
+		cm.status[name].Connecting = false
+		cm.mutex.Unlock()
+		cm.logger.Infof("Updated vault connection status: %s (connected: %v)", name, status.Connected)
+	}()
 }
 
 // RemoveConnection removes a vault connection
@@ -96,7 +118,9 @@ func (cm *ConnectionManager) GetConnectionStatus(name string) (*ConnectionStatus
 		return nil, fmt.Errorf("connection '%s' not found", name)
 	}
 
-	return status, nil
+	// Return a copy to prevent race conditions
+	statusCopy := *status
+	return &statusCopy, nil
 }
 
 // ListConnections returns all connection names
@@ -139,23 +163,23 @@ func (cm *ConnectionManager) RefreshConnectionStatus(name string) error {
 
 // RefreshAllConnections refreshes the status of all connections
 func (cm *ConnectionManager) RefreshAllConnections() {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
+	cm.mutex.RLock()
+	names := make([]string, 0, len(cm.clients))
+	for name := range cm.clients {
+		names = append(names, name)
+	}
+	cm.mutex.RUnlock()
 
-	for name, client := range cm.clients {
-		status, err := cm.testConnection(client)
-		if err != nil {
-			cm.logger.Warnf("Failed to refresh connection '%s': %v", name, err)
-			// Update status with error
-			if existingStatus, ok := cm.status[name]; ok {
-				existingStatus.Connected = false
-				existingStatus.Error = err.Error()
-				existingStatus.LastCheck = time.Now()
-			}
+	for _, name := range names {
+		cm.mutex.RLock()
+		status, ok := cm.status[name]
+		cm.mutex.RUnlock()
+
+		if ok && !status.Connected && !status.Connecting {
+			// Do not refresh connections that have failed, unless manually triggered
 			continue
 		}
-
-		cm.status[name] = status
+		cm.TestConnectionAsync(name)
 	}
 }
 
@@ -210,4 +234,19 @@ func (cm *ConnectionManager) GetHealthyConnections() []string {
 	}
 
 	return healthy
+}
+
+// GetConnectedConnections returns all connections that are connected (regardless of sealed/initialized status)
+func (cm *ConnectionManager) GetConnectedConnections() []string {
+	cm.mutex.RLock()
+	defer cm.mutex.RUnlock()
+
+	var connected []string
+	for name, status := range cm.status {
+		if status.Connected {
+			connected = append(connected, name)
+		}
+	}
+
+	return connected
 }

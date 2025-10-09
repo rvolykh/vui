@@ -12,19 +12,20 @@ import (
 func TestLayoutOfflineMode(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
-		Vault: config.VaultConfig{
-			Address:    "http://localhost:8200",
-			AuthMethod: "token",
+		Vaults: map[string]config.VaultProfile{
+			"default": {
+				Address:    "http://localhost:8200",
+				AuthMethod: "token",
+			},
 		},
 	}
+	logger := logrus.New()
 
 	// Create test vault manager
-	vaultMgr, err := vault.NewManager(&cfg.Vault)
+	vaultMgr, err := vault.NewManager(cfg, logger)
 	if err != nil {
 		t.Skip("Skipping test - no vault server available")
 	}
-
-	logger := logrus.New()
 
 	// Create layout
 	layout := NewLayout(cfg, vaultMgr, logger)
@@ -40,18 +41,19 @@ func TestLayoutOfflineMode(t *testing.T) {
 func TestLayoutStructure(t *testing.T) {
 	// Test that the layout structure is correct
 	cfg := &config.Config{
-		Vault: config.VaultConfig{
-			Address:    "http://localhost:8200",
-			AuthMethod: "token",
+		Vaults: map[string]config.VaultProfile{
+			"default": {
+				Address:    "http://localhost:8200",
+				AuthMethod: "token",
+			},
 		},
 	}
 
-	vaultMgr, err := vault.NewManager(&cfg.Vault)
+	logger := logrus.New()
+	vaultMgr, err := vault.NewManager(cfg, logger)
 	if err != nil {
 		t.Skip("Skipping test - no vault server available")
 	}
-
-	logger := logrus.New()
 
 	layout := NewLayout(cfg, vaultMgr, logger)
 

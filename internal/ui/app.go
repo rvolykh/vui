@@ -48,15 +48,7 @@ func (a *App) Run() error {
 		return fmt.Errorf("failed to initialize layout: %w", err)
 	}
 
-	// Check if we have any healthy connections
-	healthyConnections := a.vaultMgr.GetHealthyConnections()
-	if len(healthyConnections) == 0 {
-		// No healthy connections, show vault profiles
-		a.showVaultProfiles()
-	} else {
-		// We have healthy connections, show the main layout
-		a.uiApp.SetRoot(a.layout.GetRoot(), true)
-	}
+	a.showVaultProfiles()
 
 	// Start the application
 	return a.uiApp.Run()
@@ -194,7 +186,7 @@ func (a *App) switchVault() {
 // showVaultProfiles shows the vault profiles screen
 func (a *App) showVaultProfiles() {
 	// Create vault profiles panel
-	profilesPanel := NewVaultProfilesPanel(a.config, a.vaultMgr, a.logger)
+	profilesPanel := NewVaultProfilesPanel(a.config, a.vaultMgr, a.uiApp, a.logger)
 	if err := profilesPanel.Initialize(); err != nil {
 		a.logger.Errorf("Failed to initialize vault profiles panel: %v", err)
 		a.showError("Failed to initialize vault profiles")
@@ -203,6 +195,12 @@ func (a *App) showVaultProfiles() {
 
 	// Set success callback to switch to main layout
 	profilesPanel.SetSuccessCallback(func() {
+		profilesPanel.StopRefresher()
+		// re-initialize layout to reflect any changes in vault connections
+		if err := a.layout.Initialize(); err != nil {
+			a.showError(fmt.Sprintf("Failed to initialize layout: %v", err))
+			return
+		}
 		a.uiApp.SetRoot(a.layout.GetRoot(), true)
 	})
 
@@ -260,9 +258,9 @@ func (a *App) showError(message string) {
 		SetText(fmt.Sprintf("Error: %s", message)).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			// Go back to vault profiles if no healthy connections
-			healthyConnections := a.vaultMgr.GetHealthyConnections()
-			if len(healthyConnections) == 0 {
+			// Go back to vault profiles if no connected vaults
+			connectedVaults := a.vaultMgr.GetConnectedConnections()
+			if len(connectedVaults) == 0 {
 				a.showVaultProfiles()
 			} else {
 				a.uiApp.SetRoot(a.layout.GetRoot(), true)

@@ -3,6 +3,8 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -16,16 +18,21 @@ type VaultProfilesPanel struct {
 	config          *config.Config
 	vaultMgr        *vault.Manager
 	list            *tview.List
+	app             *tview.Application
 	logger          *logrus.Logger
 	successCallback func() // Callback to switch to main layout
+	stopRefresh     chan struct{}
+	stopOnce        sync.Once
 }
 
 // NewVaultProfilesPanel creates a new vault profiles panel
-func NewVaultProfilesPanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *VaultProfilesPanel {
+func NewVaultProfilesPanel(config *config.Config, vaultMgr *vault.Manager, app *tview.Application, logger *logrus.Logger) *VaultProfilesPanel {
 	return &VaultProfilesPanel{
-		config:   config,
-		vaultMgr: vaultMgr,
-		logger:   logger,
+		config:      config,
+		vaultMgr:    vaultMgr,
+		app:         app,
+		logger:      logger,
+		stopRefresh: make(chan struct{}),
 	}
 }
 
@@ -47,7 +54,61 @@ func (vpp *VaultProfilesPanel) Initialize() error {
 	vpp.setupKeyboardNavigation()
 
 	// Load and display profiles
-	return vpp.loadProfiles()
+	if err := vpp.loadProfiles(); err != nil {
+		return err
+	}
+
+	// Start a background refresher
+	go vpp.startRefresher()
+
+	return nil
+}
+
+// StopRefresher stops the background refresher
+func (vpp *VaultProfilesPanel) StopRefresher() {
+	vpp.stopOnce.Do(func() {
+		if vpp.stopRefresh != nil {
+			close(vpp.stopRefresh)
+		}
+	})
+}
+
+// startRefresher starts a background goroutine to refresh the profiles list
+func (vpp *VaultProfilesPanel) startRefresher() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			vpp.app.QueueUpdateDraw(func() {
+				// Refresh the UI to show latest statuses
+				vpp.Refresh()
+
+				// Stop refreshing if all connections have been resolved
+				if !vpp.hasConnectingProfiles() {
+					vpp.StopRefresher()
+				}
+			})
+		case <-vpp.stopRefresh:
+			return
+		}
+	}
+}
+
+// hasConnectingProfiles checks if there are any profiles that are in the process of connecting
+func (vpp *VaultProfilesPanel) hasConnectingProfiles() bool {
+	vaults := vpp.vaultMgr.ListVaults()
+	for _, vaultName := range vaults {
+		status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
+		if err != nil {
+			continue
+		}
+		if status.Connecting {
+			return true
+		}
+	}
+	return false
 }
 
 // setupKeyboardNavigation sets up keyboard navigation
@@ -61,7 +122,9 @@ func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'r':
-				// Refresh profiles
+				// Manually refresh connections
+				vpp.logger.Info("Manual refresh triggered")
+				vpp.vaultMgr.GetConnectionManager().RefreshAllConnections()
 				vpp.Refresh()
 				return nil
 			case 'n':
@@ -83,6 +146,9 @@ func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
 
 // loadProfiles loads and displays vault profiles
 func (vpp *VaultProfilesPanel) loadProfiles() error {
+	// Store the current selection
+	currentItem := vpp.list.GetCurrentItem()
+
 	// Clear existing items
 	vpp.list.Clear()
 
@@ -114,6 +180,15 @@ func (vpp *VaultProfilesPanel) loadProfiles() error {
 		})
 	}
 
+	// Restore selection
+	if vpp.list.GetItemCount() > 0 {
+		if currentItem >= vpp.list.GetItemCount() {
+			vpp.list.SetCurrentItem(vpp.list.GetItemCount() - 1)
+		} else {
+			vpp.list.SetCurrentItem(currentItem)
+		}
+	}
+
 	return nil
 }
 
@@ -122,7 +197,10 @@ func (vpp *VaultProfilesPanel) formatVaultDisplay(name string, status *vault.Con
 	var statusIcon string
 	var statusText string
 
-	if status.Connected {
+	if status.Connecting {
+		statusIcon = "⏳"
+		statusText = "Connecting"
+	} else if status.Connected {
 		if status.Sealed {
 			statusIcon = "🔒"
 			statusText = "Sealed"
@@ -158,6 +236,7 @@ func (vpp *VaultProfilesPanel) switchToSelectedVault() {
 	if currentItem < 0 {
 		return
 	}
+	vpp.StopRefresher()
 
 	// Get the vault name from the display text
 	mainText, _ := vpp.list.GetItemText(currentItem)
@@ -174,21 +253,31 @@ func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
 		vpp.logger.Errorf("Failed to switch to vault '%s': %v", vaultName, err)
 		return
 	}
+	vpp.StopRefresher()
 
 	vpp.logger.Infof("Switched to vault: %s", vaultName)
 
-	// Refresh connection status
-	vpp.vaultMgr.RefreshConnections()
+	// Manually refresh the specific connection
+	vpp.vaultMgr.GetConnectionManager().RefreshConnectionStatus(vaultName)
 
-	// Check if the vault is now healthy
-	healthyConnections := vpp.vaultMgr.GetHealthyConnections()
-	if len(healthyConnections) > 0 {
-		// We have a healthy connection, switch to main layout
+	// Check the connection status
+	status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
+	if err != nil {
+		vpp.logger.Errorf("Failed to get connection status for '%s': %v", vaultName, err)
+		vpp.Refresh()
+		return
+	}
+
+	// Allow switching if the vault is connected, even if sealed
+	// The user might want to unseal it or view its status
+	if status.Connected {
+		// We have a connection, switch to main layout
 		if vpp.successCallback != nil {
 			vpp.successCallback()
 		}
 	} else {
-		// Still no healthy connections, refresh the display
+		// Not connected yet, refresh the display
+		vpp.logger.Warnf("Vault '%s' is not connected yet (status: %+v)", vaultName, status)
 		vpp.Refresh()
 	}
 }
@@ -221,10 +310,13 @@ func (vpp *VaultProfilesPanel) extractVaultName(displayText string) string {
 	// The display text format is: "ICON VaultName | Status: ... | Address: ..."
 	parts := strings.Split(displayText, " | ")
 	if len(parts) > 0 {
-		// Remove the icon and get the vault name
+		// Split by whitespace to separate icon from vault name
 		firstPart := strings.TrimSpace(parts[0])
-		if len(firstPart) > 2 {
-			return firstPart[2:] // Skip the icon (2 characters)
+		fields := strings.Fields(firstPart)
+
+		// The first field is the emoji icon, the second is the vault name
+		if len(fields) >= 2 {
+			return fields[1]
 		}
 	}
 	return ""
@@ -232,11 +324,6 @@ func (vpp *VaultProfilesPanel) extractVaultName(displayText string) string {
 
 // Refresh refreshes the profiles display
 func (vpp *VaultProfilesPanel) Refresh() {
-	vpp.logger.Info("Refreshing vault profiles")
-
-	// Refresh connection statuses
-	vpp.vaultMgr.RefreshConnections()
-
 	// Reload profiles
 	if err := vpp.loadProfiles(); err != nil {
 		vpp.logger.Errorf("Failed to refresh profiles: %v", err)

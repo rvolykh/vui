@@ -15,20 +15,21 @@ func TestNewApp(t *testing.T) {
 		App: config.AppConfig{
 			DefaultVault: "test",
 		},
-		Vault: config.VaultConfig{
-			Address:    "http://localhost:8200",
-			AuthMethod: "token",
+		Vaults: map[string]config.VaultProfile{
+			"test": {
+				Address:    "http://localhost:8200",
+				AuthMethod: "token",
+			},
 		},
 	}
 
+	logger := logrus.New()
 	// Create test vault manager
-	vaultMgr, err := vault.NewManager(&cfg.Vault)
+	vaultMgr, err := vault.NewManager(cfg, logger)
 	// This will fail because there's no vault server, but we can still test the UI creation
 	if err != nil {
 		t.Skip("Skipping test - no vault server available")
 	}
-
-	logger := logrus.New()
 
 	// Create UI app
 	uiApp := NewApp(cfg, vaultMgr, logger)
@@ -41,8 +42,8 @@ func TestNewApp(t *testing.T) {
 func TestAppStructure(t *testing.T) {
 	// Test that the app structure is correct
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{} // This would normally be properly initialized
 	logger := logrus.New()
+	vaultMgr, _ := vault.NewManager(cfg, logger)
 
 	uiApp := NewApp(cfg, vaultMgr, logger)
 

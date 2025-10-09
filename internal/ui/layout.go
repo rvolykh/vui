@@ -40,10 +40,10 @@ func (l *Layout) SetApplication(app *tview.Application) {
 func (l *Layout) Initialize() error {
 	l.logger.Info("Initializing UI layout")
 
-	// Check if we have any healthy connections
-	healthyConnections := l.vaultMgr.GetHealthyConnections()
-	if len(healthyConnections) == 0 {
-		l.logger.Info("No healthy vault connections, initializing layout in offline mode")
+	// Check if we have any connected vaults (even if sealed or not fully initialized)
+	connectedVaults := l.vaultMgr.GetConnectedConnections()
+	if len(connectedVaults) == 0 {
+		l.logger.Info("No vault connections available, initializing layout in offline mode")
 		return l.initializeOfflineMode()
 	}
 
@@ -91,19 +91,43 @@ The application is running in offline mode because no vault servers are currentl
 
 [yellow]To connect to a vault:[white]
 1. Ensure your vault server is running
-2. Check your configuration in ~/.vui/vaults.yaml
+2. Check your configuration in ~/.vui/config.yaml
 3. Verify network connectivity to your vault server
 4. Restart the application
 
 [yellow]Configuration:[white]
-• Default vault address: ` + l.config.Vault.Address + `
-• Auth method: ` + l.config.Vault.AuthMethod + `
+• Default vault address: ` + l.getDefaultVaultAddress() + `
+• Auth method: ` + l.getDefaultVaultAuthMethod() + `
 
 [yellow]Press Ctrl+C to exit[white]`)
 
 	l.root.AddItem(offlineText, 0, 1, true)
 
 	return nil
+}
+
+// getDefaultVaultAddress returns the address of the default vault
+func (l *Layout) getDefaultVaultAddress() string {
+	defaultVaultName := l.config.App.DefaultVault
+	if defaultVaultName == "" {
+		defaultVaultName = "default"
+	}
+	if profile, ok := l.config.Vaults[defaultVaultName]; ok {
+		return profile.Address
+	}
+	return "not configured"
+}
+
+// getDefaultVaultAuthMethod returns the auth method of the default vault
+func (l *Layout) getDefaultVaultAuthMethod() string {
+	defaultVaultName := l.config.App.DefaultVault
+	if defaultVaultName == "" {
+		defaultVaultName = "default"
+	}
+	if profile, ok := l.config.Vaults[defaultVaultName]; ok {
+		return profile.AuthMethod
+	}
+	return "not configured"
 }
 
 // setupLayout creates the main layout structure

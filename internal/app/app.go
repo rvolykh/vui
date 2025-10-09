@@ -27,6 +27,14 @@ func New() (*App, error) {
 		FullTimestamp: true,
 	})
 
+	// Configure logger to write to file instead of stdout/stderr
+	// This prevents log output from interfering with the TUI
+	logFile, err := os.OpenFile("vui.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+	logger.SetOutput(logFile)
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -34,7 +42,7 @@ func New() (*App, error) {
 	}
 
 	// Initialize vault manager
-	vaultManager, err := vault.NewManager(&cfg.Vault)
+	vaultManager, err := vault.NewManager(cfg, logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize vault manager: %w", err)
 	}

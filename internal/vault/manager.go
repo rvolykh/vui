@@ -11,12 +11,11 @@ import (
 
 // Manager manages multiple Vault connections
 type Manager struct {
-	config        *config.VaultConfig
+	config        *config.Config
 	clients       map[string]*Client
 	activeVault   string
 	connectionMgr *ConnectionManager
 	secretsMgr    *SecretsManager
-	profilesMgr   *config.VaultProfilesManager
 	authMgr       *AuthManager
 	mutex         sync.RWMutex
 	logger        *logrus.Logger
@@ -25,27 +24,22 @@ type Manager struct {
 // Client wraps the Vault API client with additional functionality
 type Client struct {
 	apiClient *api.Client
-	config    *config.VaultConfig
+	profile   *config.VaultProfile
 	logger    *logrus.Logger
 }
 
 // NewManager creates a new vault manager
-func NewManager(cfg *config.VaultConfig) (*Manager, error) {
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-
-	// Initialize profiles manager
-	profilesMgr := config.NewVaultProfilesManager()
-	if err := profilesMgr.LoadProfiles(); err != nil {
-		logger.Warnf("Failed to load vault profiles: %v", err)
+func NewManager(cfg *config.Config, logger *logrus.Logger) (*Manager, error) {
+	if logger == nil {
+		logger = logrus.New()
+		logger.SetLevel(logrus.InfoLevel)
 	}
 
 	manager := &Manager{
 		config:        cfg,
 		clients:       make(map[string]*Client),
-		activeVault:   cfg.DefaultVault,
+		activeVault:   cfg.App.DefaultVault,
 		connectionMgr: NewConnectionManager(logger),
-		profilesMgr:   profilesMgr,
 		authMgr:       NewAuthManager(logger),
 		logger:        logger,
 	}
@@ -54,67 +48,51 @@ func NewManager(cfg *config.VaultConfig) (*Manager, error) {
 	if err := manager.initializeAllClients(); err != nil {
 		return nil, fmt.Errorf("failed to initialize vault clients: %w", err)
 	}
+	// Test connections asynchronously
+	manager.testAllConnectionsAsync()
 
 	return manager, nil
 }
 
 // initializeAllClients initializes all configured vault clients
 func (m *Manager) initializeAllClients() error {
-	// Initialize default client first
-	if err := m.initializeDefaultClient(); err != nil {
-		m.logger.Warnf("Failed to initialize default client: %v", err)
-	}
-
-	// Initialize all profile clients
-	profiles := m.profilesMgr.GetAllProfiles()
-	for name, profile := range profiles {
-		if name == "default" {
-			continue // Already initialized
-		}
-
-		if err := m.initializeProfileClient(name, profile); err != nil {
+	for name, profile := range m.config.Vaults {
+		p := profile
+		if err := m.initializeProfileClient(name, &p); err != nil {
 			m.logger.Warnf("Failed to initialize client for profile '%s': %v", name, err)
 			continue
 		}
 	}
+	// Initialize secrets manager for the active client
+	if m.activeVault != "" {
+		if client, exists := m.clients[m.activeVault]; exists {
+			m.secretsMgr = NewSecretsManager(client, m.logger)
+		} else {
+			m.logger.Warnf("Active vault '%s' not found in profiles, no secrets manager initialized", m.activeVault)
+		}
+	} else if len(m.clients) > 0 {
+		// if no active vault is set, use the first one
+		for name, client := range m.clients {
+			m.activeVault = name
+			m.secretsMgr = NewSecretsManager(client, m.logger)
+			m.logger.Infof("No default vault set, using '%s' as active vault", name)
+			break
+		}
+	}
 
 	return nil
 }
 
-// initializeDefaultClient creates the default vault client
-func (m *Manager) initializeDefaultClient() error {
-	client, err := m.createClient("default", m.config)
-	if err != nil {
-		return err
+// testAllConnectionsAsync tests all vault connections asynchronously
+func (m *Manager) testAllConnectionsAsync() {
+	for name := range m.clients {
+		m.connectionMgr.TestConnectionAsync(name)
 	}
-
-	m.mutex.Lock()
-	m.clients["default"] = client
-	m.mutex.Unlock()
-
-	// Add to connection manager (this won't fail even if connection is down)
-	if err := m.connectionMgr.AddConnection("default", client); err != nil {
-		m.logger.Warnf("Failed to add connection to manager: %v", err)
-		// Continue anyway - we'll show the connection status in the UI
-	}
-
-	// Initialize secrets manager for the default client
-	m.secretsMgr = NewSecretsManager(client, m.logger)
-
-	return nil
 }
 
 // initializeProfileClient creates a client from a vault profile
 func (m *Manager) initializeProfileClient(name string, profile *config.VaultProfile) error {
-	// Convert profile to VaultConfig
-	vaultConfig := &config.VaultConfig{
-		Address:    profile.Address,
-		AuthMethod: profile.AuthMethod,
-		Token:      profile.Token,
-		Namespace:  profile.Namespace,
-	}
-
-	client, err := m.createClient(name, vaultConfig)
+	client, err := m.createClient(name, profile)
 	if err != nil {
 		return err
 	}
@@ -130,18 +108,16 @@ func (m *Manager) initializeProfileClient(name string, profile *config.VaultProf
 	m.mutex.Unlock()
 
 	// Add to connection manager
-	if err := m.connectionMgr.AddConnection(name, client); err != nil {
-		m.logger.Warnf("Failed to add connection to manager for '%s': %v", name, err)
-	}
+	m.connectionMgr.AddConnection(name, client)
 
 	return nil
 }
 
 // createClient creates a new vault client
-func (m *Manager) createClient(name string, cfg *config.VaultConfig) (*Client, error) {
+func (m *Manager) createClient(name string, profile *config.VaultProfile) (*Client, error) {
 	// Create Vault API client
 	apiConfig := api.DefaultConfig()
-	apiConfig.Address = cfg.Address
+	apiConfig.Address = profile.Address
 
 	apiClient, err := api.NewClient(apiConfig)
 	if err != nil {
@@ -149,20 +125,14 @@ func (m *Manager) createClient(name string, cfg *config.VaultConfig) (*Client, e
 	}
 
 	// Set namespace if provided
-	if cfg.Namespace != "" {
-		apiClient.SetNamespace(cfg.Namespace)
+	if profile.Namespace != "" {
+		apiClient.SetNamespace(profile.Namespace)
 	}
 
 	client := &Client{
 		apiClient: apiClient,
-		config:    cfg,
+		profile:   profile,
 		logger:    m.logger,
-	}
-
-	// Test the connection (but don't fail if it's not available)
-	if err := client.TestConnection(); err != nil {
-		m.logger.Warnf("Failed to connect to vault '%s': %v", name, err)
-		// Continue anyway - we'll show the connection status in the UI
 	}
 
 	return client, nil
@@ -214,16 +184,31 @@ func (m *Manager) SwitchVault(name string) error {
 }
 
 // AddVault adds a new vault connection
-func (m *Manager) AddVault(name string, cfg *config.VaultConfig) error {
+func (m *Manager) AddVault(name string, profile *config.VaultProfile) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	client, err := m.createClient(name, cfg)
+	if _, exists := m.config.Vaults[name]; exists {
+		return fmt.Errorf("vault profile '%s' already exists", name)
+	}
+
+	client, err := m.createClient(name, profile)
 	if err != nil {
 		return fmt.Errorf("failed to add vault '%s': %w", name, err)
 	}
 
+	m.config.Vaults[name] = *profile
 	m.clients[name] = client
+
+	if err := m.config.Save(); err != nil {
+		// rollback
+		delete(m.config.Vaults, name)
+		delete(m.clients, name)
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+	m.connectionMgr.AddConnection(name, client)
+	m.connectionMgr.TestConnectionAsync(name)
+
 	m.logger.Infof("Added vault: %s", name)
 	return nil
 }
@@ -277,16 +262,19 @@ func (m *Manager) GetHealthyConnections() []string {
 	return m.connectionMgr.GetHealthyConnections()
 }
 
+// GetConnectedConnections returns a list of all connected vaults (regardless of sealed/initialized status)
+func (m *Manager) GetConnectedConnections() []string {
+	return m.connectionMgr.GetConnectedConnections()
+}
+
 // AddVaultFromProfile adds a new vault from a profile
 func (m *Manager) AddVaultFromProfile(name string, profile *config.VaultProfile) error {
 	// Validate the profile
-	if err := m.profilesMgr.ValidateProfile(profile); err != nil {
+	if err := m.authMgr.ValidateAuthConfig(profile); err != nil {
 		return fmt.Errorf("invalid profile: %w", err)
 	}
-
-	// Save the profile
-	m.profilesMgr.SetProfile(name, profile)
-	if err := m.profilesMgr.SaveProfiles(); err != nil {
+	m.config.Vaults[name] = *profile
+	if err := m.config.Save(); err != nil {
 		return fmt.Errorf("failed to save profile: %w", err)
 	}
 
@@ -317,15 +305,11 @@ func (m *Manager) RemoveVault(name string) error {
 
 	// Remove from clients map
 	delete(m.clients, name)
-
-	// Remove from profiles
-	if err := m.profilesMgr.DeleteProfile(name); err != nil {
-		m.logger.Warnf("Failed to delete profile '%s': %v", name, err)
-	}
+	delete(m.config.Vaults, name)
 
 	// Save profiles
-	if err := m.profilesMgr.SaveProfiles(); err != nil {
-		m.logger.Warnf("Failed to save profiles after removing '%s': %v", name, err)
+	if err := m.config.Save(); err != nil {
+		m.logger.Warnf("Failed to save config after removing '%s': %v", name, err)
 	}
 
 	m.logger.Infof("Removed vault: %s", name)
@@ -333,25 +317,29 @@ func (m *Manager) RemoveVault(name string) error {
 }
 
 // GetVaultProfiles returns all vault profiles
-func (m *Manager) GetVaultProfiles() map[string]*config.VaultProfile {
-	return m.profilesMgr.GetAllProfiles()
+func (m *Manager) GetVaultProfiles() map[string]config.VaultProfile {
+	return m.config.Vaults
 }
 
 // GetVaultProfile returns a specific vault profile
 func (m *Manager) GetVaultProfile(name string) (*config.VaultProfile, error) {
-	return m.profilesMgr.GetProfile(name)
+	profile, exists := m.config.Vaults[name]
+	if !exists {
+		return nil, fmt.Errorf("vault profile '%s' not found", name)
+	}
+	return &profile, nil
 }
 
 // UpdateVaultProfile updates an existing vault profile
 func (m *Manager) UpdateVaultProfile(name string, profile *config.VaultProfile) error {
 	// Validate the profile
-	if err := m.profilesMgr.ValidateProfile(profile); err != nil {
+	if err := m.authMgr.ValidateAuthConfig(profile); err != nil {
 		return fmt.Errorf("invalid profile: %w", err)
 	}
 
 	// Update the profile
-	m.profilesMgr.SetProfile(name, profile)
-	if err := m.profilesMgr.SaveProfiles(); err != nil {
+	m.config.Vaults[name] = *profile
+	if err := m.config.Save(); err != nil {
 		return fmt.Errorf("failed to save profile: %w", err)
 	}
 
@@ -384,9 +372,9 @@ func (m *Manager) GetVaultStatus() map[string]*VaultStatus {
 
 		vaultStatus := &VaultStatus{
 			Name:       name,
-			Address:    client.config.Address,
-			Namespace:  client.config.Namespace,
-			AuthMethod: client.config.AuthMethod,
+			Address:    client.profile.Address,
+			Namespace:  client.profile.Namespace,
+			AuthMethod: client.profile.AuthMethod,
 			Connected:  connStatus.Connected,
 			Sealed:     connStatus.Sealed,
 			Error:      connStatus.Error,
