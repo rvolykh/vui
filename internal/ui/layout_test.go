@@ -67,11 +67,13 @@ func TestLayoutStructure(t *testing.T) {
 	// Test that we can get the components (they might be nil in offline mode)
 	// This is expected behavior when there's no vault connection
 	treePanel := layout.GetTreePanel()
-	secretPanel := layout.GetSecretPanel()
+	metadataPanel := layout.GetMetadataPanel()
+	valuePanel := layout.GetValuePanel()
 	statusBar := layout.GetStatusBar()
 
 	// In offline mode, these might be nil
 	_ = treePanel
-	_ = secretPanel
+	_ = metadataPanel
+	_ = valuePanel
 	_ = statusBar
 }

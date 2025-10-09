@@ -11,15 +11,17 @@ import (
 
 // Layout represents the main application layout
 type Layout struct {
-	config      *config.Config
-	vaultMgr    *vault.Manager
-	root        *tview.Flex
-	treePanel   *TreePanel
-	secretPanel *SecretPanel
-	statusBar   *StatusBar
-	modal       tview.Primitive
-	app         *tview.Application
-	logger      *logrus.Logger
+	config        *config.Config
+	vaultMgr      *vault.Manager
+	root          *tview.Flex
+	helpPanel     *HelpPanel
+	treePanel     *TreePanel
+	metadataPanel *MetadataPanel
+	valuePanel    *ValuePanel
+	statusBar     *StatusBar
+	modal         tview.Primitive
+	app           *tview.Application
+	logger        *logrus.Logger
 }
 
 // NewLayout creates a new layout
@@ -47,16 +49,28 @@ func (l *Layout) Initialize() error {
 		return l.initializeOfflineMode()
 	}
 
+	// Create the help panel
+	l.helpPanel = NewHelpPanel(l.config, l.logger)
+	if err := l.helpPanel.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize help panel: %w", err)
+	}
+
 	// Create the tree panel
 	l.treePanel = NewTreePanel(l.config, l.vaultMgr, l.logger)
 	if err := l.treePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize tree panel: %w", err)
 	}
 
-	// Create the secret panel
-	l.secretPanel = NewSecretPanel(l.config, l.vaultMgr, l.logger)
-	if err := l.secretPanel.Initialize(); err != nil {
-		return fmt.Errorf("failed to initialize secret panel: %w", err)
+	// Create the metadata panel
+	l.metadataPanel = NewMetadataPanel(l.config, l.vaultMgr, l.logger)
+	if err := l.metadataPanel.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize metadata panel: %w", err)
+	}
+
+	// Create the value panel
+	l.valuePanel = NewValuePanel(l.config, l.vaultMgr, l.logger)
+	if err := l.valuePanel.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize value panel: %w", err)
 	}
 
 	// Create the status bar
@@ -132,35 +146,88 @@ func (l *Layout) getDefaultVaultAuthMethod() string {
 
 // setupLayout creates the main layout structure
 func (l *Layout) setupLayout() {
-	// Create the main horizontal layout
-	l.root = tview.NewFlex().
-		SetDirection(tview.FlexColumn)
-
-	// Add the tree panel (left side)
-	l.root.AddItem(l.treePanel.GetPrimitive(), 0, 1, true)
-
-	// Add the secret panel (right side)
-	l.root.AddItem(l.secretPanel.GetPrimitive(), 0, 2, false)
-
-	// Create the main vertical layout
-	mainLayout := tview.NewFlex().
+	// Create the right panel (vertical split: metadata on top, value on bottom)
+	rightPanel := tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(l.root, 0, 1, true).
-		AddItem(l.statusBar.GetPrimitive(), 1, 0, false)
+		AddItem(l.metadataPanel.GetPrimitive(), 0, 1, false).
+		AddItem(l.valuePanel.GetPrimitive(), 0, 2, false)
 
-	l.root = mainLayout
+	// Create the main horizontal layout (tree on left, right panel on right)
+	contentLayout := tview.NewFlex().
+		SetDirection(tview.FlexColumn).
+		AddItem(l.treePanel.GetPrimitive(), 0, 1, true).
+		AddItem(rightPanel, 0, 2, false)
+
+	// Create the main vertical layout (help at top, content in middle, status bar at bottom)
+	l.root = tview.NewFlex().
+		SetDirection(tview.FlexRow).
+		AddItem(l.helpPanel.GetPrimitive(), 3, 0, false).
+		AddItem(contentLayout, 0, 1, true).
+		AddItem(l.statusBar.GetPrimitive(), 1, 0, false)
 }
 
 // setupEventHandlers sets up event handlers between components
 func (l *Layout) setupEventHandlers() {
-	// When a tree item is selected, update the secret panel
-	l.treePanel.SetSelectionHandler(func(path string, isSecret bool) {
-		if isSecret {
-			l.secretPanel.ShowSecret(path)
+	// When a tree item is selected, update the metadata and value panels
+	l.treePanel.SetSelectionHandler(func(node *vault.SecretNode, selectedKey string) {
+		l.logger.Infof("Selection changed: path=%s, isSecret=%v, key=%s", node.Path, node.IsSecret, selectedKey)
+
+		if selectedKey != "" {
+			// A specific key within a secret is selected
+			// We need to fetch the full secret data to show the key's value
+			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			if err != nil {
+				l.logger.Errorf("Failed to get secrets manager: %v", err)
+				return
+			}
+
+			// Get the full secret data
+			secret, err := secretsManager.GetSecret(node.Path)
+			if err != nil {
+				l.logger.Errorf("Failed to get secret: %v", err)
+				return
+			}
+
+			l.metadataPanel.ShowKey(secret, selectedKey)
+			l.valuePanel.ShowKey(secret, selectedKey)
+			l.statusBar.UpdateSelection(fmt.Sprintf("%s/%s", node.Path, selectedKey), true)
+		} else if node.IsSecret {
+			// A secret is selected (but not a specific key)
+			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			if err != nil {
+				l.logger.Errorf("Failed to get secrets manager: %v", err)
+				return
+			}
+
+			// Get the full secret data
+			secret, err := secretsManager.GetSecret(node.Path)
+			if err != nil {
+				l.logger.Errorf("Failed to get secret: %v", err)
+				return
+			}
+
+			l.metadataPanel.ShowSecret(secret)
+			l.valuePanel.ShowSecret(secret)
+			l.statusBar.UpdateSelection(node.Path, true)
 		} else {
-			l.secretPanel.ShowDirectory(path)
+			// A directory is selected
+			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			if err != nil {
+				l.logger.Errorf("Failed to get secrets manager: %v", err)
+				return
+			}
+
+			// Get directory contents to count items
+			secrets, err := secretsManager.ListSecrets(node.Path)
+			if err != nil {
+				l.logger.Errorf("Failed to list secrets: %v", err)
+				secrets = []*vault.SecretNode{}
+			}
+
+			l.metadataPanel.ShowDirectory(node.Path, len(secrets))
+			l.valuePanel.ShowDirectory(node.Path)
+			l.statusBar.UpdateSelection(node.Path, false)
 		}
-		l.statusBar.UpdateSelection(path, isSecret)
 	})
 
 	// When tree is refreshed, update status bar
@@ -188,9 +255,14 @@ func (l *Layout) Refresh() {
 		l.treePanel.Refresh()
 	}
 
-	// Refresh secret panel
-	if l.secretPanel != nil {
-		l.secretPanel.Refresh()
+	// Refresh metadata panel
+	if l.metadataPanel != nil {
+		l.metadataPanel.Refresh()
+	}
+
+	// Refresh value panel
+	if l.valuePanel != nil {
+		l.valuePanel.Refresh()
 	}
 
 	// Refresh status bar
@@ -204,9 +276,14 @@ func (l *Layout) GetTreePanel() *TreePanel {
 	return l.treePanel
 }
 
-// GetSecretPanel returns the secret panel
-func (l *Layout) GetSecretPanel() *SecretPanel {
-	return l.secretPanel
+// GetMetadataPanel returns the metadata panel
+func (l *Layout) GetMetadataPanel() *MetadataPanel {
+	return l.metadataPanel
+}
+
+// GetValuePanel returns the value panel
+func (l *Layout) GetValuePanel() *ValuePanel {
+	return l.valuePanel
 }
 
 // GetStatusBar returns the status bar

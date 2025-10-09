@@ -18,7 +18,7 @@ type TreePanel struct {
 	tree             *tview.TreeView
 	rootNode         *tview.TreeNode
 	formsMgr         *FormsManager
-	selectionHandler func(string, bool)
+	selectionHandler func(*vault.SecretNode, string)
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
 	logger           *logrus.Logger
@@ -213,6 +213,23 @@ func (tp *TreePanel) handleNodeChanged(node *tview.TreeNode) {
 		return
 	}
 
+	// Check if this is a key node (child of a secret)
+	if keyRef, ok := reference.(string); ok {
+		// This is a key within a secret
+		parent := tp.findParentNode(node)
+		if parent != nil {
+			if parentRef := parent.GetReference(); parentRef != nil {
+				if secret, ok := parentRef.(*vault.SecretNode); ok {
+					tp.logger.Infof("Key navigated to: %s in secret %s", keyRef, secret.Path)
+					if tp.selectionHandler != nil {
+						tp.selectionHandler(secret, keyRef)
+					}
+					return
+				}
+			}
+		}
+	}
+
 	secret, ok := reference.(*vault.SecretNode)
 	if !ok {
 		return
@@ -222,7 +239,7 @@ func (tp *TreePanel) handleNodeChanged(node *tview.TreeNode) {
 
 	// Update the right panel to show this secret/directory
 	if tp.selectionHandler != nil {
-		tp.selectionHandler(secret.Path, secret.IsSecret)
+		tp.selectionHandler(secret, "")
 	}
 }
 
@@ -231,6 +248,13 @@ func (tp *TreePanel) handleNodeSelection(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if reference == nil {
 		tp.logger.Debug("Node selection: no reference found")
+		return
+	}
+
+	// Check if this is a key node (child of a secret)
+	if _, ok := reference.(string); ok {
+		// This is a key within a secret - keys can't be expanded further
+		tp.logger.Debug("Node selection: key node selected")
 		return
 	}
 
@@ -245,6 +269,9 @@ func (tp *TreePanel) handleNodeSelection(node *tview.TreeNode) {
 	// If this is a directory, expand/collapse it
 	if !secret.IsSecret {
 		tp.expandDirectory(node, secret.Path)
+	} else {
+		// If this is a secret, expand/collapse it to show keys
+		tp.expandSecret(node, secret)
 	}
 }
 
@@ -320,6 +347,94 @@ func (tp *TreePanel) expandDirectory(node *tview.TreeNode, path string) {
 		node.SetExpanded(true)
 		tp.logger.Infof("Directory '%s' is empty", path)
 	}
+}
+
+// expandSecret expands a secret node to show its keys
+func (tp *TreePanel) expandSecret(node *tview.TreeNode, secret *vault.SecretNode) {
+	tp.logger.Infof("Expanding secret: %s", secret.Path)
+
+	// Check if already loaded (has children)
+	children := node.GetChildren()
+	if len(children) > 0 {
+		// Already loaded, just toggle expansion
+		tp.logger.Infof("Secret already loaded, toggling: %s", secret.Path)
+		node.SetExpanded(!node.IsExpanded())
+		return
+	}
+
+	// First time expanding - load the secret data to get keys
+	tp.logger.Infof("Loading keys for secret: %s", secret.Path)
+
+	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	if err != nil {
+		tp.logger.Errorf("Failed to get secrets manager: %v", err)
+		// Add error node
+		errorNode := tview.NewTreeNode("❌ Error loading").
+			SetSelectable(false).
+			SetColor(tcell.ColorRed)
+		node.AddChild(errorNode)
+		return
+	}
+
+	// Get the full secret with data
+	fullSecret, err := secretsManager.GetSecret(secret.Path)
+	if err != nil {
+		tp.logger.Errorf("Failed to get secret '%s': %v", secret.Path, err)
+		// Add error node
+		errorNode := tview.NewTreeNode(fmt.Sprintf("❌ Error: %v", err)).
+			SetSelectable(false).
+			SetColor(tcell.ColorRed)
+		node.AddChild(errorNode)
+		return
+	}
+
+	tp.logger.Infof("Found %d keys in secret: %s", len(fullSecret.Data), secret.Path)
+
+	// Add child nodes for each key
+	if len(fullSecret.Data) > 0 {
+		for key := range fullSecret.Data {
+			tp.logger.Infof("Adding key: %s", key)
+
+			keyNode := tview.NewTreeNode("🔑 " + key).
+				SetSelectable(true).
+				SetReference(key). // Store the key name as reference
+				SetColor(tcell.ColorLightBlue)
+
+			node.AddChild(keyNode)
+		}
+		node.SetExpanded(true)
+		tp.logger.Infof("Successfully expanded secret '%s' with %d keys", secret.Path, len(fullSecret.Data))
+	} else {
+		// No keys, add an empty placeholder
+		emptyNode := tview.NewTreeNode("(empty secret)").
+			SetSelectable(false).
+			SetColor(tcell.ColorGray)
+		node.AddChild(emptyNode)
+		node.SetExpanded(true)
+		tp.logger.Infof("Secret '%s' has no keys", secret.Path)
+	}
+}
+
+// findParentNode finds the parent node of a given node
+func (tp *TreePanel) findParentNode(targetNode *tview.TreeNode) *tview.TreeNode {
+	if tp.rootNode == nil {
+		return nil
+	}
+	return tp.findParentNodeRecursive(tp.rootNode, targetNode)
+}
+
+// findParentNodeRecursive recursively searches for the parent of a target node
+func (tp *TreePanel) findParentNodeRecursive(current *tview.TreeNode, target *tview.TreeNode) *tview.TreeNode {
+	children := current.GetChildren()
+	for _, child := range children {
+		if child == target {
+			return current
+		}
+		if parent := tp.findParentNodeRecursive(child, target); parent != nil {
+			return parent
+		}
+	}
+	return nil
 }
 
 // createSecret creates a new secret
@@ -444,7 +559,7 @@ func (tp *TreePanel) Refresh() {
 }
 
 // SetSelectionHandler sets the selection handler
-func (tp *TreePanel) SetSelectionHandler(handler func(string, bool)) {
+func (tp *TreePanel) SetSelectionHandler(handler func(*vault.SecretNode, string)) {
 	tp.selectionHandler = handler
 }
 
