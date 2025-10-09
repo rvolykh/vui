@@ -100,8 +100,7 @@ func (mp *MetadataPanel) ShowKey(secret *vault.SecretNode, key string) {
 [yellow]Secret:[white] %s
 [yellow]Key:[white] %s
 [yellow]Path:[white] %s
-
-[gray]Press 'v' to copy this key's value[white]`, secret.Name, key, secret.Path)
+`, secret.Name, key, secret.Path)
 
 	mp.textView.SetText(content)
 }

@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/hashicorp/vault/api"
@@ -336,12 +335,12 @@ func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.
 
 	// Read certificate and key files (Note: This is a simplified implementation)
 	// In a real implementation, you would need to configure TLS properly
-	_, err := ioutil.ReadFile(certPath)
+	_, err := os.ReadFile(certPath)
 	if err != nil {
 		return fmt.Errorf("failed to read certificate file: %w", err)
 	}
 
-	_, err = ioutil.ReadFile(keyPath)
+	_, err = os.ReadFile(keyPath)
 	if err != nil {
 		return fmt.Errorf("failed to read key file: %w", err)
 	}
@@ -375,7 +374,7 @@ func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, 
 
 	// Check for credentials file path
 	if credsPath, ok := profile.AuthConfig["gcp_credentials_path"].(string); ok && credsPath != "" {
-		credsData, err := ioutil.ReadFile(credsPath)
+		credsData, err := os.ReadFile(credsPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read GCP credentials file: %w", err)
 		}
@@ -384,7 +383,7 @@ func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, 
 
 	// Check for environment variable
 	if creds := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS"); creds != "" {
-		credsData, err := ioutil.ReadFile(creds)
+		credsData, err := os.ReadFile(creds)
 		if err != nil {
 			return "", fmt.Errorf("failed to read GCP credentials from environment: %w", err)
 		}
@@ -408,7 +407,7 @@ func (am *AuthManager) getKubernetesToken(profile *config.VaultProfile) (string,
 	}
 
 	// Read token from file
-	tokenData, err := ioutil.ReadFile(tokenPath)
+	tokenData, err := os.ReadFile(tokenPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read Kubernetes token: %w", err)
 	}

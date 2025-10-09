@@ -92,7 +92,7 @@ func (m *Manager) testAllConnectionsAsync() {
 
 // initializeProfileClient creates a client from a vault profile
 func (m *Manager) initializeProfileClient(name string, profile *config.VaultProfile) error {
-	client, err := m.createClient(name, profile)
+	client, err := m.createClient(profile)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (m *Manager) initializeProfileClient(name string, profile *config.VaultProf
 
 // initializeProfileClientLocked creates a client from a vault profile (assumes caller holds mutex)
 func (m *Manager) initializeProfileClientLocked(name string, profile *config.VaultProfile) error {
-	client, err := m.createClient(name, profile)
+	client, err := m.createClient(profile)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (m *Manager) initializeProfileClientLocked(name string, profile *config.Vau
 }
 
 // createClient creates a new vault client
-func (m *Manager) createClient(name string, profile *config.VaultProfile) (*Client, error) {
+func (m *Manager) createClient(profile *config.VaultProfile) (*Client, error) {
 	// Create Vault API client
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = profile.Address
@@ -226,7 +226,7 @@ func (m *Manager) AddVault(name string, profile *config.VaultProfile) error {
 		return fmt.Errorf("vault profile '%s' already exists", name)
 	}
 
-	client, err := m.createClient(name, profile)
+	client, err := m.createClient(profile)
 	if err != nil {
 		return fmt.Errorf("failed to add vault '%s': %w", name, err)
 	}

@@ -350,7 +350,7 @@ func (sm *SecretsManager) searchRecursive(node *SecretNode, options *AdvancedSea
 		result := &SearchResult{
 			Node:       node,
 			Path:       node.Path,
-			MatchType:  sm.getMatchType(node, options),
+			MatchType:  sm.getMatchType(options),
 			MatchValue: sm.getMatchValue(node, options),
 			Score:      sm.calculateScore(node, options),
 		}
@@ -448,7 +448,7 @@ func (sm *SecretsManager) matchesMetadata(node *SecretNode, options *AdvancedSea
 }
 
 // getMatchType returns the type of match found
-func (sm *SecretsManager) getMatchType(node *SecretNode, options *AdvancedSearchOptions) string {
+func (sm *SecretsManager) getMatchType(options *AdvancedSearchOptions) string {
 	switch options.SearchType {
 	case SearchByName:
 		return "name"

@@ -3,9 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/atotto/clipboard"
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/vault"
@@ -47,19 +45,10 @@ func (vp *ValuePanel) Initialize() error {
 	vp.textView.SetWordWrap(true)
 	vp.textView.SetScrollable(true)
 
-	// Set up keyboard navigation
-	vp.setupKeyboardNavigation()
-
 	// Show initial message
 	vp.showDefaultMessage()
 
 	return nil
-}
-
-// setupKeyboardNavigation sets up keyboard navigation for the value panel
-func (vp *ValuePanel) setupKeyboardNavigation() {
-	// Value panel is display-only, no keyboard actions
-	// All actions are handled by the tree panel
 }
 
 // ShowSecret displays all key-value pairs of a secret
@@ -108,12 +97,6 @@ func (vp *ValuePanel) displaySecretData(secret *vault.SecretNode) {
 			}
 			content.WriteString("\n\n")
 		}
-
-		maskStatus := "[red]masked[white]"
-		if !vp.isMasked {
-			maskStatus = "[green]visible[white]"
-		}
-		content.WriteString(fmt.Sprintf("[gray]Values are %s[white]", maskStatus))
 	} else {
 		content.WriteString("[red]No data found[white]\n")
 	}
@@ -136,12 +119,6 @@ func (vp *ValuePanel) displayKeyValue(secret *vault.SecretNode, key string) {
 				content.WriteString(valueStr)
 			}
 			content.WriteString("\n\n")
-
-			maskStatus := "[red]masked[white]"
-			if !vp.isMasked {
-				maskStatus = "[green]visible[white]"
-			}
-			content.WriteString(fmt.Sprintf("[gray]Value is %s[white]", maskStatus))
 		} else {
 			content.WriteString("[red]Key not found[white]\n")
 		}
@@ -184,82 +161,6 @@ Select a secret from the tree to view its values.
 	vp.textView.SetText(content)
 }
 
-// copyToClipboard copies the current content to clipboard
-func (vp *ValuePanel) copyToClipboard() {
-	if vp.currentSecret == nil {
-		vp.logger.Warn("No secret selected to copy")
-		return
-	}
-
-	var clipboardContent strings.Builder
-
-	if vp.currentKey != "" {
-		// Copy specific key value
-		if value, ok := vp.currentSecret.Data[vp.currentKey]; ok {
-			clipboardContent.WriteString(fmt.Sprintf("%v", value))
-		}
-	} else {
-		// Copy all secret data
-		for key, value := range vp.currentSecret.Data {
-			clipboardContent.WriteString(fmt.Sprintf("%s: %v\n", key, value))
-		}
-	}
-
-	// Copy to clipboard
-	if err := clipboard.WriteAll(clipboardContent.String()); err != nil {
-		vp.logger.Errorf("Failed to copy to clipboard: %v", err)
-		return
-	}
-
-	vp.logger.Info("Copied to clipboard")
-	vp.showCopySuccess()
-}
-
-// copySecretValue copies just the secret value to clipboard
-func (vp *ValuePanel) copySecretValue() {
-	if vp.currentSecret == nil {
-		vp.logger.Warn("No secret selected to copy")
-		return
-	}
-
-	var valueStr string
-
-	if vp.currentKey != "" {
-		// Copy specific key value
-		if value, ok := vp.currentSecret.Data[vp.currentKey]; ok {
-			valueStr = fmt.Sprintf("%v", value)
-		}
-	} else {
-		// If there's only one key-value pair, copy just the value
-		if len(vp.currentSecret.Data) == 1 {
-			for _, value := range vp.currentSecret.Data {
-				valueStr = fmt.Sprintf("%v", value)
-			}
-		} else {
-			// Multiple values - copy all values
-			var values []string
-			for _, value := range vp.currentSecret.Data {
-				values = append(values, fmt.Sprintf("%v", value))
-			}
-			valueStr = strings.Join(values, "\n")
-		}
-	}
-
-	if valueStr == "" {
-		vp.logger.Warn("No value to copy")
-		return
-	}
-
-	// Copy to clipboard
-	if err := clipboard.WriteAll(valueStr); err != nil {
-		vp.logger.Errorf("Failed to copy value to clipboard: %v", err)
-		return
-	}
-
-	vp.logger.Info("Copied value to clipboard")
-	vp.showCopySuccess()
-}
-
 // ToggleMasking toggles the masking of secret values (public for TreePanel)
 func (vp *ValuePanel) ToggleMasking() {
 	vp.isMasked = !vp.isMasked
@@ -273,21 +174,6 @@ func (vp *ValuePanel) ToggleMasking() {
 			vp.displaySecretData(vp.currentSecret)
 		}
 	}
-}
-
-// showCopySuccess shows a brief success message
-func (vp *ValuePanel) showCopySuccess() {
-	// Store the current text
-	currentText := vp.textView.GetText(false)
-
-	// Show success message
-	vp.textView.SetText("[green]✓ Copied to clipboard![white]\n\n" + currentText)
-
-	// Schedule to restore the original text after 1.5 seconds
-	go func() {
-		time.Sleep(1500 * time.Millisecond)
-		vp.textView.SetText(currentText)
-	}()
 }
 
 // Refresh refreshes the value panel
