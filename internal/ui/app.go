@@ -79,6 +79,25 @@ func (a *App) setupKeyboardShortcuts() {
 			// Switch vault
 			a.switchVault()
 			return nil
+		case tcell.KeyTab:
+			// Switch vault (alternative to Ctrl+v)
+			a.switchVault()
+			return nil
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case 'h':
+				// Show help (alternative to F1)
+				a.showHelp()
+				return nil
+			case 'q':
+				// Exit application (alternative to Ctrl+C)
+				a.Stop()
+				return nil
+			case 'r':
+				// Refresh (alternative to F5)
+				a.refresh()
+				return nil
+			}
 		}
 
 		// Let other components handle the event

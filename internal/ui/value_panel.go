@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/vault"
@@ -20,6 +19,7 @@ type ValuePanel struct {
 	textView      *tview.TextView
 	currentSecret *vault.SecretNode
 	currentKey    string
+	isMasked      bool // Track if values are currently masked
 	logger        *logrus.Logger
 }
 
@@ -28,6 +28,7 @@ func NewValuePanel(config *config.Config, vaultMgr *vault.Manager, logger *logru
 	return &ValuePanel{
 		config:   config,
 		vaultMgr: vaultMgr,
+		isMasked: true, // Values are masked by default
 		logger:   logger,
 	}
 }
@@ -38,7 +39,7 @@ func (vp *ValuePanel) Initialize() error {
 
 	// Set up the text view appearance
 	vp.textView.SetBorder(true).
-		SetTitle("Secret Value").
+		SetTitle("Value").
 		SetTitleAlign(tview.AlignLeft)
 
 	// Enable dynamic colors and word wrap
@@ -57,29 +58,15 @@ func (vp *ValuePanel) Initialize() error {
 
 // setupKeyboardNavigation sets up keyboard navigation for the value panel
 func (vp *ValuePanel) setupKeyboardNavigation() {
-	vp.textView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyRune:
-			switch event.Rune() {
-			case 'c':
-				// Copy to clipboard
-				vp.copyToClipboard()
-				return nil
-			case 'v':
-				// Copy just the value to clipboard
-				vp.copySecretValue()
-				return nil
-			}
-		}
-
-		return event
-	})
+	// Value panel is display-only, no keyboard actions
+	// All actions are handled by the tree panel
 }
 
 // ShowSecret displays all key-value pairs of a secret
 func (vp *ValuePanel) ShowSecret(secret *vault.SecretNode) {
 	vp.currentSecret = secret
 	vp.currentKey = ""
+	vp.isMasked = true // Reset to masked when showing a new secret
 	vp.displaySecretData(secret)
 }
 
@@ -87,6 +74,7 @@ func (vp *ValuePanel) ShowSecret(secret *vault.SecretNode) {
 func (vp *ValuePanel) ShowKey(secret *vault.SecretNode, key string) {
 	vp.currentSecret = secret
 	vp.currentKey = key
+	vp.isMasked = true // Reset to masked when showing a new key
 	vp.displayKeyValue(secret, key)
 }
 
@@ -107,17 +95,25 @@ func (vp *ValuePanel) displaySecretData(secret *vault.SecretNode) {
 
 	content.WriteString("[yellow]Secret Data:[white]\n\n")
 
-	if secret.Data != nil && len(secret.Data) > 0 {
+	if len(secret.Data) > 0 {
 		for key, value := range secret.Data {
 			content.WriteString(fmt.Sprintf("[green]%s:[white]\n", key))
 
-			// Format the value
+			// Format the value (masked or unmasked)
 			valueStr := vp.formatValue(value)
-			content.WriteString(valueStr)
+			if vp.isMasked {
+				content.WriteString("••••••••")
+			} else {
+				content.WriteString(valueStr)
+			}
 			content.WriteString("\n\n")
 		}
 
-		content.WriteString("[gray]Press 'c' to copy all, 'v' to copy value, expand keys to view individually[white]")
+		maskStatus := "[red]masked[white]"
+		if !vp.isMasked {
+			maskStatus = "[green]visible[white]"
+		}
+		content.WriteString(fmt.Sprintf("[gray]Values are %s[white]", maskStatus))
 	} else {
 		content.WriteString("[red]No data found[white]\n")
 	}
@@ -134,9 +130,18 @@ func (vp *ValuePanel) displayKeyValue(secret *vault.SecretNode, key string) {
 	if secret.Data != nil {
 		if value, ok := secret.Data[key]; ok {
 			valueStr := vp.formatValue(value)
-			content.WriteString(valueStr)
+			if vp.isMasked {
+				content.WriteString("••••••••")
+			} else {
+				content.WriteString(valueStr)
+			}
 			content.WriteString("\n\n")
-			content.WriteString("[gray]Press 'v' to copy this value[white]")
+
+			maskStatus := "[red]masked[white]"
+			if !vp.isMasked {
+				maskStatus = "[green]visible[white]"
+			}
+			content.WriteString(fmt.Sprintf("[gray]Value is %s[white]", maskStatus))
 		} else {
 			content.WriteString("[red]Key not found[white]\n")
 		}
@@ -253,6 +258,21 @@ func (vp *ValuePanel) copySecretValue() {
 
 	vp.logger.Info("Copied value to clipboard")
 	vp.showCopySuccess()
+}
+
+// ToggleMasking toggles the masking of secret values (public for TreePanel)
+func (vp *ValuePanel) ToggleMasking() {
+	vp.isMasked = !vp.isMasked
+	vp.logger.Infof("Toggled value masking: masked=%v", vp.isMasked)
+
+	// Refresh the display
+	if vp.currentSecret != nil {
+		if vp.currentKey != "" {
+			vp.displayKeyValue(vp.currentSecret, vp.currentKey)
+		} else {
+			vp.displaySecretData(vp.currentSecret)
+		}
+	}
 }
 
 // showCopySuccess shows a brief success message

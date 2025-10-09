@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
@@ -21,6 +22,7 @@ type TreePanel struct {
 	selectionHandler func(*vault.SecretNode, string)
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
+	valuePanel       *ValuePanel                 // Reference to value panel for mask toggle
 	logger           *logrus.Logger
 }
 
@@ -67,19 +69,20 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 			}
 			return nil
 		case tcell.KeyLeft:
-			// Collapse directory on Left arrow
+			// Collapse directory on Left arrow (but not the root node)
 			node := tp.tree.GetCurrentNode()
 			if node != nil && node.IsExpanded() {
+				// Don't collapse the root node
+				if node == tp.rootNode {
+					tp.logger.Debug("Cannot collapse root node")
+					return nil
+				}
 				node.SetExpanded(false)
 				tp.logger.Info("Collapsed directory")
 			}
 			return nil
 		case tcell.KeyRune:
 			switch event.Rune() {
-			case 'r':
-				// Refresh tree
-				tp.Refresh()
-				return nil
 			case 'c':
 				// Create new secret
 				tp.createSecret()
@@ -89,11 +92,18 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 				tp.editSecret()
 				return nil
 			case 'd':
-				// Delete selected secret (with Ctrl)
+				// Check if Ctrl is pressed - delete secret
 				if event.Modifiers()&tcell.ModCtrl != 0 {
 					tp.deleteSecret()
 					return nil
 				}
+				// Otherwise toggle value masking
+				tp.toggleValueMasking()
+				return nil
+			case 'v':
+				// Copy value only
+				tp.copySecretValue()
+				return nil
 			case 's':
 				// Search secrets
 				tp.searchSecrets()
@@ -128,6 +138,9 @@ func (tp *TreePanel) loadTree() error {
 	tp.tree.SetRoot(rootNode)
 	tp.tree.SetCurrentNode(rootNode)
 
+	// Ensure root node is always expanded
+	rootNode.SetExpanded(true)
+
 	tp.logger.Infof("Successfully loaded secrets tree with %d children", len(rootNode.GetChildren()))
 
 	return nil
@@ -147,6 +160,9 @@ func (tp *TreePanel) createEmptyTree(message string) error {
 
 	tp.rootNode = rootNode
 	tp.tree.SetRoot(rootNode)
+
+	// Ensure root node is always expanded
+	rootNode.SetExpanded(true)
 
 	return nil
 }
@@ -571,6 +587,123 @@ func (tp *TreePanel) SetRefreshHandler(handler func()) {
 // SetModalHandler sets the modal handler
 func (tp *TreePanel) SetModalHandler(handler func(tview.Primitive, bool)) {
 	tp.modalHandler = handler
+}
+
+// SetValuePanel sets the value panel reference for actions
+func (tp *TreePanel) SetValuePanel(valuePanel *ValuePanel) {
+	tp.valuePanel = valuePanel
+}
+
+// toggleValueMasking toggles the masking of values in the value panel
+func (tp *TreePanel) toggleValueMasking() {
+	if tp.valuePanel != nil {
+		tp.valuePanel.ToggleMasking()
+		tp.logger.Info("Toggled value masking")
+	}
+}
+
+// copySecretValue copies the secret value to clipboard
+func (tp *TreePanel) copySecretValue() {
+	node := tp.tree.GetCurrentNode()
+	if node == nil {
+		tp.logger.Warn("No node selected")
+		return
+	}
+
+	reference := node.GetReference()
+	if reference == nil {
+		tp.logger.Warn("No reference in selected node")
+		return
+	}
+
+	// Check if this is a key node (child of a secret)
+	if keyRef, ok := reference.(string); ok {
+		// This is a key within a secret - copy that specific key's value
+		parent := tp.findParentNode(node)
+		if parent != nil {
+			if parentRef := parent.GetReference(); parentRef != nil {
+				if secret, ok := parentRef.(*vault.SecretNode); ok {
+					tp.copyKeyValue(secret, keyRef)
+					return
+				}
+			}
+		}
+	}
+
+	// Otherwise, check if it's a secret node
+	if secret, ok := reference.(*vault.SecretNode); ok && secret.IsSecret {
+		tp.copySecretValues(secret)
+	}
+}
+
+// copyKeyValue copies a specific key's value from a secret
+func (tp *TreePanel) copyKeyValue(secret *vault.SecretNode, key string) {
+	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	if err != nil {
+		tp.logger.Errorf("Failed to get secrets manager: %v", err)
+		return
+	}
+
+	fullSecret, err := secretsManager.GetSecret(secret.Path)
+	if err != nil {
+		tp.logger.Errorf("Failed to get secret: %v", err)
+		return
+	}
+
+	if value, ok := fullSecret.Data[key]; ok {
+		valueStr := fmt.Sprintf("%v", value)
+		if err := clipboard.WriteAll(valueStr); err != nil {
+			tp.logger.Errorf("Failed to copy value to clipboard: %v", err)
+			return
+		}
+		tp.logger.Infof("Copied key '%s' value to clipboard", key)
+	}
+}
+
+// copySecretValues copies all values from a secret (or single value if only one key)
+func (tp *TreePanel) copySecretValues(secret *vault.SecretNode) {
+	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	if err != nil {
+		tp.logger.Errorf("Failed to get secrets manager: %v", err)
+		return
+	}
+
+	fullSecret, err := secretsManager.GetSecret(secret.Path)
+	if err != nil {
+		tp.logger.Errorf("Failed to get secret: %v", err)
+		return
+	}
+
+	if len(fullSecret.Data) == 0 {
+		tp.logger.Warn("No data in secret")
+		return
+	}
+
+	// If there's only one key, copy just the value
+	if len(fullSecret.Data) == 1 {
+		for _, value := range fullSecret.Data {
+			valueStr := fmt.Sprintf("%v", value)
+			if err := clipboard.WriteAll(valueStr); err != nil {
+				tp.logger.Errorf("Failed to copy value to clipboard: %v", err)
+				return
+			}
+			tp.logger.Info("Copied value to clipboard")
+			return
+		}
+	}
+
+	// Multiple values - copy all values (one per line)
+	var values []string
+	for _, value := range fullSecret.Data {
+		values = append(values, fmt.Sprintf("%v", value))
+	}
+	valueStr := strings.Join(values, "\n")
+
+	if err := clipboard.WriteAll(valueStr); err != nil {
+		tp.logger.Errorf("Failed to copy values to clipboard: %v", err)
+		return
+	}
+	tp.logger.Info("Copied all values to clipboard")
 }
 
 // showModal shows or hides a modal

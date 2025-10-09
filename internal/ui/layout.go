@@ -50,7 +50,7 @@ func (l *Layout) Initialize() error {
 	}
 
 	// Create the help panel
-	l.helpPanel = NewHelpPanel(l.config, l.logger)
+	l.helpPanel = NewHelpPanel(l.config, l.vaultMgr, l.logger)
 	if err := l.helpPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize help panel: %w", err)
 	}
@@ -84,6 +84,9 @@ func (l *Layout) Initialize() error {
 
 	// Set up event handlers
 	l.setupEventHandlers()
+
+	// Set value panel reference in tree panel for actions
+	l.treePanel.SetValuePanel(l.valuePanel)
 
 	return nil
 }
@@ -161,7 +164,7 @@ func (l *Layout) setupLayout() {
 	// Create the main vertical layout (help at top, content in middle, status bar at bottom)
 	l.root = tview.NewFlex().
 		SetDirection(tview.FlexRow).
-		AddItem(l.helpPanel.GetPrimitive(), 3, 0, false).
+		AddItem(l.helpPanel.GetPrimitive(), 9, 0, false).
 		AddItem(contentLayout, 0, 1, true).
 		AddItem(l.statusBar.GetPrimitive(), 1, 0, false)
 }

@@ -1,23 +1,28 @@
 package ui
 
 import (
+	"fmt"
+
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // HelpPanel represents the navigation help panel
 type HelpPanel struct {
 	config   *config.Config
+	vaultMgr *vault.Manager
 	textView *tview.TextView
 	logger   *logrus.Logger
 }
 
 // NewHelpPanel creates a new help panel
-func NewHelpPanel(config *config.Config, logger *logrus.Logger) *HelpPanel {
+func NewHelpPanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *HelpPanel {
 	return &HelpPanel{
-		config: config,
-		logger: logger,
+		config:   config,
+		vaultMgr: vaultMgr,
+		logger:   logger,
 	}
 }
 
@@ -41,12 +46,43 @@ func (hp *HelpPanel) Initialize() error {
 
 // updateHelpText updates the help text
 func (hp *HelpPanel) updateHelpText() {
-	helpText := `[yellow]Navigation:[white] ↑/↓:Move  ←/→:Collapse/Expand  Enter:Select  Tab:Switch Panel  [yellow]|[white]  ` +
-		`[yellow]Actions:[white] c:Create  e:Edit  Ctrl+d:Delete  r:Refresh  s:Search  [yellow]|[white]  ` +
-		`[yellow]Secret:[white] c:Copy All  v:Copy Value  [yellow]|[white]  ` +
-		`[yellow]Global:[white] F1:Help  F5:Refresh  Ctrl+v:Switch Vault  Ctrl+C:Exit`
+	// Get current vault connection info
+	vaultInfo := hp.getVaultInfo()
+
+	// Create a formatted help text with 4 equal columns: Navigation, Secrets, Values, Global
+	helpText := fmt.Sprintf(`[yellow]Connected to Vault:[white] %s
+
+[yellow]Navigation[white]                [yellow]Secrets[white]                  [yellow]Values[white]                   [yellow]Global[white]
+  ↑/↓: Move             c: Create new            d: Toggle mask/unmask   h/F1: Help
+  ←/→: Collapse/Expand  e: Edit selected         v: Copy to clipboard    r/F5: Refresh
+  Enter: Select/Expand  Ctrl+d: Delete selected                          Tab/Ctrl+v: Profiles
+                        s: Search                                        q/Ctrl+C: Quit`, vaultInfo)
 
 	hp.textView.SetText(helpText)
+}
+
+// getVaultInfo returns the current vault connection information
+func (hp *HelpPanel) getVaultInfo() string {
+	if hp.vaultMgr == nil {
+		return "[red]No connection[white]"
+	}
+
+	currentVault := hp.vaultMgr.GetActiveVault()
+	if currentVault == "" {
+		return "[red]No vault selected[white]"
+	}
+
+	// Get vault profile for address
+	if profile, ok := hp.config.Vaults[currentVault]; ok {
+		return fmt.Sprintf("[green]%s[white] (%s)", currentVault, profile.Address)
+	}
+
+	return fmt.Sprintf("[green]%s[white]", currentVault)
+}
+
+// UpdateVaultInfo updates the vault connection information
+func (hp *HelpPanel) UpdateVaultInfo() {
+	hp.updateHelpText()
 }
 
 // GetPrimitive returns the underlying tview primitive

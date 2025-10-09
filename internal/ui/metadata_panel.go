@@ -33,7 +33,7 @@ func (mp *MetadataPanel) Initialize() error {
 
 	// Set up the text view appearance
 	mp.textView.SetBorder(true).
-		SetTitle("Item Metadata").
+		SetTitle("Metadata").
 		SetTitleAlign(tview.AlignLeft)
 
 	// Enable dynamic colors and word wrap
