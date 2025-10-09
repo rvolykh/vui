@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -212,31 +213,7 @@ func (a *App) showVaultProfiles() {
 		SetDirection(tview.FlexRow)
 
 	// Add welcome message
-	var statusText, escHelpText string
-	if a.hasActiveConnection {
-		statusText = "Select a vault profile to switch to a different vault."
-		escHelpText = "• Press Esc to go back to secrets"
-	} else {
-		statusText = "Please select a vault profile below to connect and begin."
-		escHelpText = "• Press Enter to connect to the selected profile"
-	}
-
-	welcomeText := tview.NewTextView().
-		SetDynamicColors(true).
-		SetText(fmt.Sprintf(`[yellow]Welcome to VUI - Vault UI[white]
-
-[yellow]Connection Status:[white]
-%s
-
-[yellow]Navigation:[white]
-• Use arrow keys to navigate profiles
-%s
-• Press 'r' to refresh connection status
-• Press 'n' to add a new vault profile
-• Press F1 for help
-• Press 'q' or Ctrl+C to exit
-
-[yellow]Available Vault Profiles:[white]`, statusText, escHelpText))
+	welcomeText := a.buildWelcomeText()
 
 	mainLayout.AddItem(welcomeText, 0, 1, false)
 	mainLayout.AddItem(profilesPanel.GetPrimitive(), 0, 2, true)
@@ -319,4 +296,178 @@ func (a *App) GetUIApp() *tview.Application {
 // GetLayout returns the main layout
 func (a *App) GetLayout() *Layout {
 	return a.layout
+}
+
+// buildWelcomeText creates a formatted welcome panel with connection status and navigation info
+func (a *App) buildWelcomeText() *tview.TextView {
+	textView := tview.NewTextView().
+		SetDynamicColors(true).
+		SetWordWrap(false)
+
+	// Set a draw function that rebuilds the content based on available width
+	textView.SetDrawFunc(func(screen tcell.Screen, x, y, width, height int) (int, int, int, int) {
+		// Build the content with the actual width
+		content := a.buildWelcomeContent(width)
+		textView.SetText(content)
+		return x, y, width, height
+	})
+
+	// Initialize with a default width
+	textView.SetText(a.buildWelcomeContent(80))
+
+	return textView
+}
+
+// buildWelcomeContent generates the welcome text content for a given width
+func (a *App) buildWelcomeContent(width int) string {
+	// Ensure minimum width
+	if width < 60 {
+		width = 60
+	}
+
+	// Maximum width for readability
+	if width > 120 {
+		width = 120
+	}
+
+	// Get connection status
+	var connectionStatus string
+	if a.hasActiveConnection {
+		activeVault := a.vaultMgr.GetActiveVault()
+		if activeVault != "" {
+			connectionStatus = fmt.Sprintf("[green]Connected:[white] %s", activeVault)
+		} else {
+			connectionStatus = "[yellow]No active connection - please select a profile below[white]"
+		}
+	} else {
+		connectionStatus = "[yellow]No connection - please select a profile below to begin[white]"
+	}
+
+	// Define navigation keys and their descriptions
+	navigationItems := []struct {
+		keys string
+		desc string
+	}{
+		{"↑/↓", "Navigate profiles"},
+		{"Enter", "Connect to profile"},
+		{"r", "Refresh status"},
+		{"n", "Add new profile"},
+		{"F1", "Show help"},
+		{"q/Ctrl+C", "Exit"},
+	}
+
+	// Add Esc option if we have an active connection
+	if a.hasActiveConnection {
+		navigationItems = append([]struct {
+			keys string
+			desc string
+		}{{"Esc", "Back to secrets"}}, navigationItems...)
+	}
+
+	// Define configuration paths
+	configPaths := []string{
+		"./configs/default.yaml",
+		"$HOME/.vui/default.yaml",
+		"/etc/vui/default.yaml",
+	}
+
+	// Calculate inner width (excluding borders)
+	innerWidth := width - 4 // 2 for borders + 2 for padding
+
+	// Build the welcome text with proper formatting
+	var b string
+
+	// Top border
+	b += "┌" + repeatString("─", width-2) + "┐\n"
+
+	// Title
+	b += "│ " + padRight("[yellow::b]Welcome to VUI - Vault UI[white]", innerWidth) + " │\n"
+	b += "│ " + repeatString(" ", innerWidth) + " │\n"
+
+	// Connection Status header
+	b += "│ " + padRight("[yellow]Connection Status:[white]", innerWidth) + " │\n"
+	b += "│ " + padRight(connectionStatus, innerWidth) + " │\n"
+	b += "│ " + repeatString(" ", innerWidth) + " │\n"
+
+	// Two-column headers
+	leftColWidth := innerWidth / 2
+	rightColWidth := innerWidth - leftColWidth
+	b += "│ " + padRight("[yellow]Navigation[white]", leftColWidth) + padRight("[yellow]Config Paths[white]", rightColWidth) + " │\n"
+
+	// Add navigation items and config paths side by side
+	maxRows := len(navigationItems)
+	if len(configPaths) > maxRows {
+		maxRows = len(configPaths)
+	}
+
+	for i := 0; i < maxRows; i++ {
+		// Left column: Navigation
+		leftContent := ""
+		if i < len(navigationItems) {
+			nav := navigationItems[i]
+			// Build left content with explicit padding for keys (12 chars total including indentation)
+			keysPart := fmt.Sprintf("  [cyan]%s[white]", nav.keys)
+			// Pad keys to consistent width (use rune count for proper Unicode handling)
+			keysVisible := utf8.RuneCountInString(nav.keys)
+			keysPadding := 12 - keysVisible
+			if keysPadding < 0 {
+				keysPadding = 0
+			}
+			leftContent = keysPart + repeatString(" ", keysPadding) + nav.desc
+		}
+
+		// Right column: Configuration
+		rightContent := ""
+		if i < len(configPaths) {
+			rightContent = fmt.Sprintf("  [green]- %s[white]", configPaths[i])
+		}
+
+		line := "│ " + padRight(leftContent, leftColWidth) + padRight(rightContent, rightColWidth) + " │\n"
+		b += line
+	}
+
+	// Bottom border
+	b += "└" + repeatString("─", width-2) + "┘\n"
+	b += "\n[yellow]Available Vault Profiles:[white]"
+
+	return b
+}
+
+// padRight pads a string to the right with spaces, accounting for tview color tags
+func padRight(s string, width int) string {
+	visibleLen := utf8.RuneCountInString(s) - countColorTags(s)
+	if visibleLen >= width {
+		return s
+	}
+	return s + repeatString(" ", width-visibleLen)
+}
+
+// repeatString repeats a string n times
+func repeatString(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
+	result := ""
+	for i := 0; i < n; i++ {
+		result += s
+	}
+	return result
+}
+
+// countColorTags counts the number of characters used by tview color tags
+func countColorTags(s string) int {
+	count := 0
+	inTag := false
+	for _, c := range s {
+		if c == '[' {
+			inTag = true
+		}
+		if inTag {
+			count++
+		}
+		if c == ']' {
+			inTag = false
+		}
+	}
+	return count
 }
