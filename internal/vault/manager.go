@@ -110,6 +110,25 @@ func (m *Manager) initializeProfileClient(name string, profile *config.VaultProf
 	return nil
 }
 
+// initializeProfileClientLocked creates a client from a vault profile (assumes caller holds mutex)
+func (m *Manager) initializeProfileClientLocked(name string, profile *config.VaultProfile) error {
+	client, err := m.createClient(name, profile)
+	if err != nil {
+		return err
+	}
+
+	// Don't authenticate during initialization - authentication will happen when user selects a profile
+	// This prevents unnecessary connection attempts at startup for all configured vaults
+
+	// Caller already holds m.mutex
+	m.clients[name] = client
+
+	// Add to connection manager
+	m.connectionMgr.AddConnection(name, client)
+
+	return nil
+}
+
 // createClient creates a new vault client
 func (m *Manager) createClient(name string, profile *config.VaultProfile) (*Client, error) {
 	// Create Vault API client
@@ -412,4 +431,96 @@ type VaultStatus struct {
 	Sealed     bool   `json:"sealed"`
 	Error      string `json:"error,omitempty"`
 	Active     bool   `json:"active"`
+}
+
+// ReloadConfiguration reloads the configuration from disk and reinitializes vault profiles
+func (m *Manager) ReloadConfiguration() error {
+	m.logger.Info("Reloading configuration from disk...")
+
+	// Reload config from disk
+	newConfig, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("failed to reload configuration: %w", err)
+	}
+
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	// Track which profiles exist in the new config
+	newProfiles := make(map[string]bool)
+	for name := range newConfig.Vaults {
+		newProfiles[name] = true
+	}
+
+	// Remove profiles that no longer exist in the config
+	for name := range m.clients {
+		if !newProfiles[name] {
+			m.logger.Infof("Removing vault profile '%s' (no longer in config)", name)
+			m.connectionMgr.RemoveConnection(name)
+			delete(m.clients, name)
+		}
+	}
+
+	// Add new profiles or update existing ones
+	for name, profile := range newConfig.Vaults {
+		p := profile
+		_, exists := m.clients[name]
+
+		if !exists {
+			// New profile - add it
+			m.logger.Infof("Adding new vault profile '%s'", name)
+			if err := m.initializeProfileClientLocked(name, &p); err != nil {
+				m.logger.Warnf("Failed to initialize new profile '%s': %v", name, err)
+				continue
+			}
+		} else {
+			// Existing profile - check if it changed
+			oldProfile := m.config.Vaults[name]
+			if profileChanged(oldProfile, p) {
+				m.logger.Infof("Updating vault profile '%s'", name)
+				// Remove old connection
+				m.connectionMgr.RemoveConnection(name)
+				delete(m.clients, name)
+				// Reinitialize with new profile
+				if err := m.initializeProfileClientLocked(name, &p); err != nil {
+					m.logger.Warnf("Failed to reinitialize profile '%s': %v", name, err)
+					continue
+				}
+			}
+		}
+	}
+
+	// Update the config reference
+	m.config = newConfig
+
+	// Re-test all connections
+	m.logger.Info("Re-testing all vault connections...")
+	for name := range m.clients {
+		m.connectionMgr.TestConnectionAsync(name)
+	}
+
+	m.logger.Info("Configuration reloaded successfully")
+	return nil
+}
+
+// profileChanged checks if a vault profile has changed
+func profileChanged(old, new config.VaultProfile) bool {
+	return old.Address != new.Address ||
+		old.AuthMethod != new.AuthMethod ||
+		old.Token != new.Token ||
+		old.Namespace != new.Namespace ||
+		!authConfigEqual(old.AuthConfig, new.AuthConfig)
+}
+
+// authConfigEqual checks if two auth configs are equal
+func authConfigEqual(a, b map[string]interface{}) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
+			return false
+		}
+	}
+	return true
 }

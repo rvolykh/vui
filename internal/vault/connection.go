@@ -183,6 +183,18 @@ func (cm *ConnectionManager) RefreshAllConnections() {
 	}
 }
 
+// SetAllConnecting sets all connections to "Connecting" state
+func (cm *ConnectionManager) SetAllConnecting() {
+	cm.mutex.Lock()
+	defer cm.mutex.Unlock()
+
+	for name, status := range cm.status {
+		status.Connecting = true
+		status.Error = ""
+		cm.logger.Debugf("Set connection '%s' to connecting state", name)
+	}
+}
+
 // testConnection tests a vault connection and returns its status
 func (cm *ConnectionManager) testConnection(client *Client) (*ConnectionStatus, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

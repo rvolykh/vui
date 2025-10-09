@@ -128,13 +128,17 @@ func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
 			// Switch to selected vault
 			vpp.switchToSelectedVault()
 			return nil
+		case tcell.KeyF5:
+			// Refresh connections (F5)
+			vpp.logger.Info("Manual refresh triggered (F5)")
+			vpp.refreshProfiles()
+			return nil
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'r':
 				// Manually refresh connections
 				vpp.logger.Info("Manual refresh triggered")
-				vpp.vaultMgr.GetConnectionManager().RefreshAllConnections()
-				vpp.Refresh()
+				vpp.refreshProfiles()
 				return nil
 			case 'n':
 				// Add new vault
@@ -352,6 +356,56 @@ func (vpp *VaultProfilesPanel) Refresh() {
 	if err := vpp.loadProfiles(); err != nil {
 		vpp.logger.Errorf("Failed to refresh profiles: %v", err)
 	}
+}
+
+// refreshProfiles reloads the configuration and refreshes all connections
+func (vpp *VaultProfilesPanel) refreshProfiles() {
+	vpp.logger.Info("Reloading configuration and refreshing connections...")
+
+	// Run the reload in a goroutine to avoid blocking the UI thread
+	go func() {
+		// Set all connections to "Connecting" state immediately
+		vpp.vaultMgr.GetConnectionManager().SetAllConnecting()
+
+		// Refresh the display to show "Connecting" state
+		vpp.app.QueueUpdateDraw(func() {
+			vpp.Refresh()
+		})
+
+		// Reload configuration from disk (this will test connections asynchronously)
+		if err := vpp.vaultMgr.ReloadConfiguration(); err != nil {
+			vpp.logger.Errorf("Failed to reload configuration: %v", err)
+			vpp.app.QueueUpdateDraw(func() {
+				if vpp.errorCallback != nil {
+					vpp.errorCallback(fmt.Sprintf("Failed to reload configuration:\n\n%v", err))
+				}
+			})
+			return
+		}
+
+		// Ensure the background refresher is running to update UI as connections complete
+		// We need to restart it since we now have connecting profiles
+		vpp.ensureRefresherRunning()
+
+		vpp.logger.Info("Configuration reload initiated, testing connections...")
+	}()
+}
+
+// ensureRefresherRunning ensures the background refresher is running
+func (vpp *VaultProfilesPanel) ensureRefresherRunning() {
+	// Try to stop existing refresher
+	vpp.stopOnce.Do(func() {
+		if vpp.stopRefresh != nil {
+			close(vpp.stopRefresh)
+		}
+	})
+
+	// Create new refresher
+	vpp.stopRefresh = make(chan struct{})
+	vpp.stopOnce = sync.Once{}
+	go vpp.startRefresher()
+
+	vpp.logger.Debug("Background refresher started")
 }
 
 // GetPrimitive returns the underlying tview primitive

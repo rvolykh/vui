@@ -20,6 +20,7 @@ type App struct {
 	logger              *logrus.Logger
 	currentRoot         tview.Primitive // Track current screen for help dialog
 	hasActiveConnection bool            // Track if user has selected a profile and has an active connection
+	onProfilesScreen    bool            // Track if we're currently on the profiles screen
 }
 
 // NewApp creates a new UI application
@@ -75,9 +76,14 @@ func (a *App) setupKeyboardShortcuts() {
 			a.showHelp()
 			return nil
 		case tcell.KeyF5:
-			// Refresh
-			a.refresh()
-			return nil
+			// Refresh - context aware
+			// If on profiles screen, let the profiles panel handle it
+			if !a.onProfilesScreen {
+				a.refresh()
+				return nil
+			}
+			// Let the profiles panel handle F5
+			return event
 		case tcell.KeyCtrlV:
 			// Switch vault
 			a.switchVault()
@@ -97,9 +103,14 @@ func (a *App) setupKeyboardShortcuts() {
 				a.Stop()
 				return nil
 			case 'r':
-				// Refresh (alternative to F5)
-				a.refresh()
-				return nil
+				// Refresh (alternative to F5) - context aware
+				// If on profiles screen, let the profiles panel handle it
+				if !a.onProfilesScreen {
+					a.refresh()
+					return nil
+				}
+				// Let the profiles panel handle 'r'
+				return event
 			}
 		}
 
@@ -179,6 +190,9 @@ func (a *App) switchVault() {
 
 // showVaultProfiles shows the vault profiles screen
 func (a *App) showVaultProfiles() {
+	// Mark that we're on the profiles screen
+	a.onProfilesScreen = true
+
 	// Create vault profiles panel
 	profilesPanel := NewVaultProfilesPanel(a.config, a.vaultMgr, a.uiApp, a.logger)
 	if err := profilesPanel.Initialize(); err != nil {
@@ -190,6 +204,8 @@ func (a *App) showVaultProfiles() {
 	// Set success callback to switch to main layout
 	profilesPanel.SetSuccessCallback(func() {
 		profilesPanel.StopRefresher()
+		// Mark that we're no longer on the profiles screen
+		a.onProfilesScreen = false
 		// re-initialize layout to reflect any changes in vault connections
 		if err := a.layout.Initialize(); err != nil {
 			a.showError(fmt.Sprintf("Failed to initialize layout: %v", err))
@@ -225,6 +241,8 @@ func (a *App) showVaultProfiles() {
 			// Only allow going back if user has already selected a profile (not at initial startup)
 			if a.hasActiveConnection {
 				profilesPanel.StopRefresher()
+				// Mark that we're no longer on the profiles screen
+				a.onProfilesScreen = false
 				a.currentRoot = a.layout.GetRoot()
 				a.uiApp.SetRoot(a.currentRoot, true)
 				return nil
@@ -350,7 +368,7 @@ func (a *App) buildWelcomeContent(width int) string {
 	}{
 		{"↑/↓", "Navigate profiles"},
 		{"Enter", "Connect to profile"},
-		{"r", "Refresh status"},
+		{"r/F5", "Refresh status"},
 		{"n", "Add new profile"},
 		{"F1", "Show help"},
 		{"q/Ctrl+C", "Exit"},
