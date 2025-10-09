@@ -17,14 +17,16 @@ type FormsManager struct {
 	vaultMgr     *vault.Manager
 	logger       *logrus.Logger
 	modalHandler func(tview.Primitive, bool)
+	app          *tview.Application
 }
 
 // NewFormsManager creates a new forms manager
-func NewFormsManager(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *FormsManager {
+func NewFormsManager(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *FormsManager {
 	return &FormsManager{
 		config:   config,
 		vaultMgr: vaultMgr,
 		logger:   logger,
+		app:      app,
 	}
 }
 
@@ -42,30 +44,163 @@ func (fm *FormsManager) showModal(primitive tview.Primitive, show bool) {
 
 // CreateSecretForm creates a form for creating a new secret
 func (fm *FormsManager) CreateSecretForm(basePath string, callback func()) tview.Primitive {
-	form := tview.NewForm()
+	// Store key-value pairs that have been added
+	keyValuePairs := make(map[string]string)
 
-	// Form fields
-	form.AddInputField("Secret Path", basePath+"/", 50, nil, nil).
-		AddInputField("Key", "", 30, nil, nil).
-		AddInputField("Value", "", 50, nil, nil).
-		AddButton("Add Key-Value", func() {
-			// This would add another key-value pair
-			fm.logger.Info("Add key-value pair")
-		}).
-		AddButton("Create", func() {
-			fm.handleCreateSecret(form, callback)
-		}).
-		AddButton("Cancel", func() {
-			if callback != nil {
-				callback()
+	// Store the secret path (persists across rebuilds)
+	secretPath := basePath + "/"
+
+	// Create a flex container to hold the form and allow dynamic updates
+	container := tview.NewFlex().SetDirection(tview.FlexRow)
+
+	// Store reference to the current form for focus management
+	var currentForm *tview.Form
+
+	// Function to rebuild the form with current key-value pairs
+	var rebuildForm func()
+	rebuildForm = func() {
+		form := tview.NewForm()
+		currentForm = form
+
+		// Secret path field - make it read-only if we have pairs added
+		pathField := tview.NewInputField().
+			SetLabel("Secret Path").
+			SetText(secretPath).
+			SetFieldWidth(50)
+
+		// Make the path field read-only if pairs have been added
+		if len(keyValuePairs) > 0 {
+			pathField.SetDisabled(true)
+		} else {
+			// Allow editing and update secretPath when changed
+			pathField.SetChangedFunc(func(text string) {
+				secretPath = text
+			})
+		}
+
+		form.AddFormItem(pathField)
+
+		// Show existing key-value pairs (read-only display)
+		if len(keyValuePairs) > 0 {
+			pairText := fmt.Sprintf("Added Pairs (%d):", len(keyValuePairs))
+			form.AddTextView(pairText, "", 0, 1, false, false)
+			for k, v := range keyValuePairs {
+				displayValue := v
+				if len(displayValue) > 40 {
+					displayValue = displayValue[:37] + "..."
+				}
+				form.AddTextView("  • "+k, displayValue, 0, 1, false, false)
 			}
-		})
+		}
 
-	form.SetBorder(true).
-		SetTitle("Create New Secret").
-		SetTitleAlign(tview.AlignLeft)
+		// New key-value input fields
+		form.AddInputField("Key", "", 30, nil, nil).
+			AddInputField("Value", "", 50, nil, nil)
 
-	return form
+		// Buttons
+		form.AddButton("Add Key-Value", func() {
+			// Find the Key and Value input fields by scanning backward from buttons
+			var keyField, valueField *tview.InputField
+			for i := form.GetFormItemCount() - 1; i >= 0; i-- {
+				item := form.GetFormItem(i)
+				if inputField, ok := item.(*tview.InputField); ok {
+					label := inputField.GetLabel()
+					if label == "Value" && valueField == nil {
+						valueField = inputField
+					} else if label == "Key" && keyField == nil {
+						keyField = inputField
+					}
+				}
+			}
+
+			if keyField == nil || valueField == nil {
+				fm.logger.Error("Could not find Key and Value fields")
+				return
+			}
+
+			key := strings.TrimSpace(keyField.GetText())
+			value := strings.TrimSpace(valueField.GetText())
+
+			if key == "" {
+				fm.logger.Warn("Key cannot be empty")
+				return
+			}
+
+			if value == "" {
+				fm.logger.Warn("Value cannot be empty")
+				return
+			}
+
+			// Add to the pairs map
+			keyValuePairs[key] = value
+			fm.logger.Infof("Added key-value pair: %s", key)
+
+			// Rebuild the form in a goroutine to avoid blocking
+			go func() {
+				if fm.app != nil {
+					fm.app.QueueUpdateDraw(func() {
+						rebuildForm()
+						// Set focus back to the form after rebuild
+						if currentForm != nil {
+							fm.app.SetFocus(currentForm)
+						}
+					})
+				}
+			}()
+		}).
+			AddButton("Create", func() {
+				// Before creating, check if there are unsaved key-value fields
+				var keyField, valueField *tview.InputField
+				for i := form.GetFormItemCount() - 1; i >= 0; i-- {
+					item := form.GetFormItem(i)
+					if inputField, ok := item.(*tview.InputField); ok {
+						label := inputField.GetLabel()
+						if label == "Value" && valueField == nil {
+							valueField = inputField
+						} else if label == "Key" && keyField == nil {
+							keyField = inputField
+						}
+					}
+				}
+
+				// If there are unsaved key-value fields, add them first
+				if keyField != nil && valueField != nil {
+					key := strings.TrimSpace(keyField.GetText())
+					value := strings.TrimSpace(valueField.GetText())
+
+					if key != "" && value != "" {
+						keyValuePairs[key] = value
+						fm.logger.Infof("Auto-added key-value pair before create: %s", key)
+					}
+				}
+
+				// Now create the secret with all pairs
+				fm.handleCreateSecretWithPairs(form, keyValuePairs, secretPath, callback)
+			}).
+			AddButton("Cancel", func() {
+				if callback != nil {
+					callback()
+				}
+			})
+
+		form.SetBorder(true).
+			SetTitle(fmt.Sprintf("Create New Secret%s", func() string {
+				if len(keyValuePairs) > 0 {
+					return fmt.Sprintf(" [%d pairs added]", len(keyValuePairs))
+				}
+				return ""
+			}())).
+			SetTitleAlign(tview.AlignLeft)
+
+		// Replace the form in the container
+		container.Clear()
+		container.AddItem(form, 0, 1, true)
+	}
+
+	// Initial form build
+	rebuildForm()
+
+	return container
 }
 
 // EditSecretForm creates a form for editing an existing secret
@@ -239,6 +374,45 @@ func (fm *FormsManager) handleCreateSecret(form *tview.Form, callback func()) {
 	}
 
 	fm.logger.Infof("Created secret: %s", path)
+
+	if callback != nil {
+		callback()
+	}
+}
+
+// handleCreateSecretWithPairs handles the creation of a new secret with multiple key-value pairs
+func (fm *FormsManager) handleCreateSecretWithPairs(form *tview.Form, keyValuePairs map[string]string, path string, callback func()) {
+	if path == "" {
+		fm.logger.Error("Secret path is required")
+		return
+	}
+
+	// Check if we have at least one key-value pair
+	if len(keyValuePairs) == 0 {
+		fm.logger.Error("At least one key-value pair is required")
+		return
+	}
+
+	// Convert to the format expected by vault
+	secretData := make(map[string]interface{})
+	for k, v := range keyValuePairs {
+		secretData[k] = v
+	}
+
+	// Get secrets manager
+	secretsManager, err := fm.vaultMgr.GetSecretsManager()
+	if err != nil {
+		fm.logger.Errorf("Failed to get secrets manager: %v", err)
+		return
+	}
+
+	// Create the secret
+	if err := secretsManager.CreateSecret(path, secretData); err != nil {
+		fm.logger.Errorf("Failed to create secret: %v", err)
+		return
+	}
+
+	fm.logger.Infof("Created secret: %s with %d key-value pairs", path, len(keyValuePairs))
 
 	if callback != nil {
 		callback()

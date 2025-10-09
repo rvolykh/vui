@@ -66,18 +66,27 @@ func (a *App) Stop() {
 // setupKeyboardShortcuts sets up global keyboard shortcuts
 func (a *App) setupKeyboardShortcuts() {
 	a.uiApp.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		// Check if a modal/form is currently active
+		hasModal := a.layout != nil && a.layout.HasActiveModal()
+
 		switch event.Key() {
 		case tcell.KeyCtrlC:
-			// Exit application
+			// Exit application - always allow
 			a.Stop()
 			return nil
 		case tcell.KeyF1:
-			// Show help
-			a.showHelp()
-			return nil
+			// Show help - disable in forms
+			if !hasModal {
+				a.showHelp()
+				return nil
+			}
+			return event
 		case tcell.KeyF5:
 			// Refresh - context aware
-			// If on profiles screen, let the profiles panel handle it
+			// Disable in forms, if on profiles screen let the profiles panel handle it
+			if hasModal {
+				return event
+			}
 			if !a.onProfilesScreen {
 				a.refresh()
 				return nil
@@ -85,14 +94,27 @@ func (a *App) setupKeyboardShortcuts() {
 			// Let the profiles panel handle F5
 			return event
 		case tcell.KeyCtrlV:
-			// Switch vault
-			a.switchVault()
-			return nil
+			// Switch vault - disable in forms
+			if !hasModal {
+				a.switchVault()
+				return nil
+			}
+			return event
 		case tcell.KeyTab:
 			// Switch vault (alternative to Ctrl+v)
-			a.switchVault()
-			return nil
+			// But only if we're not in a form/modal - let forms handle Tab for field navigation
+			if !a.onProfilesScreen && !hasModal {
+				a.switchVault()
+				return nil
+			}
+			// Let the form/modal handle Tab
+			return event
 		case tcell.KeyRune:
+			// Disable all single-letter hotkeys when a form is active
+			if hasModal {
+				return event
+			}
+
 			switch event.Rune() {
 			case 'h':
 				// Show help (alternative to F1)
@@ -128,7 +150,7 @@ Navigation:
   ←/→     Collapse/expand tree nodes
   Enter   Select item or enter directory
   Esc     Go back or cancel
-  Tab     Switch between panels
+  Tab     Navigate form fields (in forms) / Switch vault (in main view)
 
 Actions:
   c       Create new secret

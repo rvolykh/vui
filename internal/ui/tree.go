@@ -23,15 +23,17 @@ type TreePanel struct {
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
 	valuePanel       *ValuePanel                 // Reference to value panel for mask toggle
+	app              *tview.Application
 	logger           *logrus.Logger
 }
 
 // NewTreePanel creates a new tree panel
-func NewTreePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *TreePanel {
+func NewTreePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *TreePanel {
 	return &TreePanel{
 		config:   config,
 		vaultMgr: vaultMgr,
-		formsMgr: NewFormsManager(config, vaultMgr, logger),
+		formsMgr: NewFormsManager(config, vaultMgr, logger, app),
+		app:      app,
 		logger:   logger,
 	}
 }

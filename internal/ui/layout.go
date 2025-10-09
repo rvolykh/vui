@@ -49,7 +49,7 @@ func (l *Layout) Initialize() error {
 	}
 
 	// Create the tree panel
-	l.treePanel = NewTreePanel(l.config, l.vaultMgr, l.logger)
+	l.treePanel = NewTreePanel(l.config, l.vaultMgr, l.logger, l.app)
 	if err := l.treePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize tree panel: %w", err)
 	}
@@ -245,4 +245,9 @@ func (l *Layout) showModal(primitive tview.Primitive, show bool) {
 		l.modal = nil
 		l.app.SetRoot(l.root, true)
 	}
+}
+
+// HasActiveModal returns true if a modal is currently displayed
+func (l *Layout) HasActiveModal() bool {
+	return l.modal != nil
 }
