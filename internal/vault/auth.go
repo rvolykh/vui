@@ -22,6 +22,22 @@ func NewAuthManager(logger *logrus.Logger) *AuthManager {
 	}
 }
 
+// VerifyAuthentication verifies that the client is authenticated by checking the token
+func (am *AuthManager) VerifyAuthentication(client *api.Client) error {
+	// Try to lookup the current token
+	secret, err := client.Auth().Token().LookupSelf()
+	if err != nil {
+		return fmt.Errorf("authentication verification failed: %w", err)
+	}
+
+	if secret == nil || secret.Data == nil {
+		return fmt.Errorf("no token data returned")
+	}
+
+	am.logger.Debug("Authentication verified successfully")
+	return nil
+}
+
 // Authenticate authenticates a client using the specified profile
 func (am *AuthManager) Authenticate(client *api.Client, profile *config.VaultProfile) error {
 	switch profile.AuthMethod {

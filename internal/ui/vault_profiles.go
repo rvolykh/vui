@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -19,7 +20,8 @@ type VaultProfilesPanel struct {
 	table           *tview.Table
 	app             *tview.Application
 	logger          *logrus.Logger
-	successCallback func() // Callback to switch to main layout
+	successCallback func()       // Callback to switch to main layout
+	errorCallback   func(string) // Callback to show error message
 	stopRefresh     chan struct{}
 	stopOnce        sync.Once
 	vaultNames      []string // Sorted list of vault names for selection tracking
@@ -39,6 +41,11 @@ func NewVaultProfilesPanel(config *config.Config, vaultMgr *vault.Manager, app *
 // SetSuccessCallback sets the callback to be called when a vault is successfully connected
 func (vpp *VaultProfilesPanel) SetSuccessCallback(callback func()) {
 	vpp.successCallback = callback
+}
+
+// SetErrorCallback sets the callback to be called when an error occurs
+func (vpp *VaultProfilesPanel) SetErrorCallback(callback func(string)) {
+	vpp.errorCallback = callback
 }
 
 // Initialize initializes the vault profiles panel
@@ -273,6 +280,11 @@ func (vpp *VaultProfilesPanel) switchToSelectedVault() {
 func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
 	if err := vpp.vaultMgr.SwitchVault(vaultName); err != nil {
 		vpp.logger.Errorf("Failed to switch to vault '%s': %v", vaultName, err)
+		// Show error dialog if callback is set
+		if vpp.errorCallback != nil {
+			vpp.errorCallback(fmt.Sprintf("Failed to connect to vault '%s':\n\n%v", vaultName, err))
+		}
+		vpp.Refresh()
 		return
 	}
 	vpp.StopRefresher()
@@ -286,6 +298,9 @@ func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
 	status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
 	if err != nil {
 		vpp.logger.Errorf("Failed to get connection status for '%s': %v", vaultName, err)
+		if vpp.errorCallback != nil {
+			vpp.errorCallback(fmt.Sprintf("Failed to get connection status for '%s':\n\n%v", vaultName, err))
+		}
 		vpp.Refresh()
 		return
 	}
@@ -298,8 +313,15 @@ func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
 			vpp.successCallback()
 		}
 	} else {
-		// Not connected yet, refresh the display
+		// Not connected yet, show error
 		vpp.logger.Warnf("Vault '%s' is not connected yet (status: %+v)", vaultName, status)
+		if vpp.errorCallback != nil {
+			errorMsg := fmt.Sprintf("Cannot connect to vault '%s'", vaultName)
+			if status.Error != "" {
+				errorMsg = fmt.Sprintf("Cannot connect to vault '%s':\n\n%s", vaultName, status.Error)
+			}
+			vpp.errorCallback(errorMsg)
+		}
 		vpp.Refresh()
 	}
 }

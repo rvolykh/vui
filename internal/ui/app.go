@@ -12,11 +12,13 @@ import (
 
 // App represents the UI application
 type App struct {
-	config   *config.Config
-	vaultMgr *vault.Manager
-	uiApp    *tview.Application
-	layout   *Layout
-	logger   *logrus.Logger
+	config              *config.Config
+	vaultMgr            *vault.Manager
+	uiApp               *tview.Application
+	layout              *Layout
+	logger              *logrus.Logger
+	currentRoot         tview.Primitive // Track current screen for help dialog
+	hasActiveConnection bool            // Track if user has selected a profile and has an active connection
 }
 
 // NewApp creates a new UI application
@@ -143,11 +145,21 @@ Global:
 
 Press any key to close this help.`
 
+	// Remember the current screen to return to it after help is closed
+	previousRoot := a.currentRoot
+
 	modal := tview.NewModal().
 		SetText(helpText).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			a.uiApp.SetRoot(a.layout.GetRoot(), true)
+			// Return to the screen that was active before help was opened
+			if previousRoot != nil {
+				a.uiApp.SetRoot(previousRoot, true)
+				a.currentRoot = previousRoot
+			} else {
+				a.uiApp.SetRoot(a.layout.GetRoot(), true)
+				a.currentRoot = a.layout.GetRoot()
+			}
 		})
 
 	a.uiApp.SetRoot(modal, false)
@@ -182,7 +194,17 @@ func (a *App) showVaultProfiles() {
 			a.showError(fmt.Sprintf("Failed to initialize layout: %v", err))
 			return
 		}
-		a.uiApp.SetRoot(a.layout.GetRoot(), true)
+		// Mark that we now have an active connection
+		a.hasActiveConnection = true
+		a.currentRoot = a.layout.GetRoot()
+		a.uiApp.SetRoot(a.currentRoot, true)
+		// Automatically load the secrets tree after profile selection
+		a.layout.Refresh()
+	})
+
+	// Set error callback to show error modal
+	profilesPanel.SetErrorCallback(func(errorMsg string) {
+		a.showAuthError(errorMsg)
 	})
 
 	// Create a layout with the profiles panel and a message
@@ -190,12 +212,13 @@ func (a *App) showVaultProfiles() {
 		SetDirection(tview.FlexRow)
 
 	// Add welcome message
-	connectedVaults := a.vaultMgr.GetConnectedConnections()
-	var statusText string
-	if len(connectedVaults) == 0 {
-		statusText = "No vault servers are currently connected. Please select a vault profile below to connect."
-	} else {
+	var statusText, escHelpText string
+	if a.hasActiveConnection {
 		statusText = "Select a vault profile to switch to a different vault."
+		escHelpText = "• Press Esc to go back to secrets"
+	} else {
+		statusText = "Please select a vault profile below to connect and begin."
+		escHelpText = "• Press Enter to connect to the selected profile"
 	}
 
 	welcomeText := tview.NewTextView().
@@ -206,15 +229,14 @@ func (a *App) showVaultProfiles() {
 %s
 
 [yellow]Navigation:[white]
-• Use arrow keys to navigate
-• Press Enter to connect to a vault
+• Use arrow keys to navigate profiles
+%s
 • Press 'r' to refresh connection status
 • Press 'n' to add a new vault profile
-• Press Esc to go back (if connected)
 • Press F1 for help
-• Press Ctrl+C to exit
+• Press 'q' or Ctrl+C to exit
 
-[yellow]Available Vault Profiles:[white]`, statusText))
+[yellow]Available Vault Profiles:[white]`, statusText, escHelpText))
 
 	mainLayout.AddItem(welcomeText, 0, 1, false)
 	mainLayout.AddItem(profilesPanel.GetPrimitive(), 0, 2, true)
@@ -223,14 +245,14 @@ func (a *App) showVaultProfiles() {
 	mainLayout.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEsc:
-			// Go back to main layout if we have a connected vault
-			connectedVaults := a.vaultMgr.GetConnectedConnections()
-			if len(connectedVaults) > 0 {
+			// Only allow going back if user has already selected a profile (not at initial startup)
+			if a.hasActiveConnection {
 				profilesPanel.StopRefresher()
-				a.uiApp.SetRoot(a.layout.GetRoot(), true)
+				a.currentRoot = a.layout.GetRoot()
+				a.uiApp.SetRoot(a.currentRoot, true)
 				return nil
 			}
-			// If no connected vaults, stay on profiles screen
+			// At initial startup, Esc does nothing - user must select a profile
 			return nil
 		case tcell.KeyF1:
 			// Show help
@@ -249,6 +271,7 @@ func (a *App) showVaultProfiles() {
 		return event
 	})
 
+	a.currentRoot = mainLayout
 	a.uiApp.SetRoot(mainLayout, true)
 }
 
@@ -263,7 +286,25 @@ func (a *App) showError(message string) {
 			if len(connectedVaults) == 0 {
 				a.showVaultProfiles()
 			} else {
-				a.uiApp.SetRoot(a.layout.GetRoot(), true)
+				a.currentRoot = a.layout.GetRoot()
+				a.uiApp.SetRoot(a.currentRoot, true)
+			}
+		})
+
+	a.uiApp.SetRoot(modal, false)
+}
+
+// showAuthError displays an authentication error message and returns to vault profiles
+func (a *App) showAuthError(message string) {
+	modal := tview.NewModal().
+		SetText(fmt.Sprintf("[red]Authentication Failed[white]\n\n%s\n\nPlease check your credentials and vault configuration.", message)).
+		AddButtons([]string{"OK"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			// Always return to vault profiles screen after auth error
+			if a.currentRoot != nil {
+				a.uiApp.SetRoot(a.currentRoot, true)
+			} else {
+				a.showVaultProfiles()
 			}
 		})
 

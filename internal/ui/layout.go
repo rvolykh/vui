@@ -42,13 +42,6 @@ func (l *Layout) SetApplication(app *tview.Application) {
 func (l *Layout) Initialize() error {
 	l.logger.Info("Initializing UI layout")
 
-	// Check if we have any connected vaults (even if sealed or not fully initialized)
-	connectedVaults := l.vaultMgr.GetConnectedConnections()
-	if len(connectedVaults) == 0 {
-		l.logger.Info("No vault connections available, initializing layout in offline mode")
-		return l.initializeOfflineMode()
-	}
-
 	// Create the help panel
 	l.helpPanel = NewHelpPanel(l.config, l.vaultMgr, l.logger)
 	if err := l.helpPanel.Initialize(); err != nil {
@@ -89,62 +82,6 @@ func (l *Layout) Initialize() error {
 	l.treePanel.SetValuePanel(l.valuePanel)
 
 	return nil
-}
-
-// initializeOfflineMode initializes the layout in offline mode
-func (l *Layout) initializeOfflineMode() error {
-	// Create a simple offline layout
-	l.root = tview.NewFlex().
-		SetDirection(tview.FlexRow)
-
-	// Create offline message
-	offlineText := tview.NewTextView().
-		SetDynamicColors(true).
-		SetText(`[yellow]VUI - Vault UI (Offline Mode)[white]
-
-[red]No vault connections available[white]
-
-The application is running in offline mode because no vault servers are currently connected.
-
-[yellow]To connect to a vault:[white]
-1. Ensure your vault server is running
-2. Check your configuration in ~/.vui/config.yaml
-3. Verify network connectivity to your vault server
-4. Restart the application
-
-[yellow]Configuration:[white]
-• Default vault address: ` + l.getDefaultVaultAddress() + `
-• Auth method: ` + l.getDefaultVaultAuthMethod() + `
-
-[yellow]Press Ctrl+C to exit[white]`)
-
-	l.root.AddItem(offlineText, 0, 1, true)
-
-	return nil
-}
-
-// getDefaultVaultAddress returns the address of the default vault
-func (l *Layout) getDefaultVaultAddress() string {
-	defaultVaultName := l.config.App.DefaultVault
-	if defaultVaultName == "" {
-		defaultVaultName = "default"
-	}
-	if profile, ok := l.config.Vaults[defaultVaultName]; ok {
-		return profile.Address
-	}
-	return "not configured"
-}
-
-// getDefaultVaultAuthMethod returns the auth method of the default vault
-func (l *Layout) getDefaultVaultAuthMethod() string {
-	defaultVaultName := l.config.App.DefaultVault
-	if defaultVaultName == "" {
-		defaultVaultName = "default"
-	}
-	if profile, ok := l.config.Vaults[defaultVaultName]; ok {
-		return profile.AuthMethod
-	}
-	return "not configured"
 }
 
 // setupLayout creates the main layout structure

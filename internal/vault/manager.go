@@ -97,11 +97,8 @@ func (m *Manager) initializeProfileClient(name string, profile *config.VaultProf
 		return err
 	}
 
-	// Authenticate the client using the profile
-	if err := m.authMgr.Authenticate(client.apiClient, profile); err != nil {
-		m.logger.Warnf("Failed to authenticate client for '%s': %v", name, err)
-		// Continue anyway - we'll show the connection status in the UI
-	}
+	// Don't authenticate during initialization - authentication will happen when user selects a profile
+	// This prevents unnecessary connection attempts at startup for all configured vaults
 
 	m.mutex.Lock()
 	m.clients[name] = client
@@ -172,6 +169,24 @@ func (m *Manager) SwitchVault(name string) error {
 	client, exists := m.clients[name]
 	if !exists {
 		return fmt.Errorf("vault '%s' not found", name)
+	}
+
+	// Get the profile for authentication
+	profile, ok := m.config.Vaults[name]
+	if !ok {
+		return fmt.Errorf("profile for vault '%s' not found", name)
+	}
+
+	// Authenticate the client when switching (if not already authenticated)
+	if err := m.authMgr.Authenticate(client.apiClient, &profile); err != nil {
+		m.logger.Errorf("Failed to authenticate to vault '%s': %v", name, err)
+		return fmt.Errorf("authentication failed: %w", err)
+	}
+
+	// Verify that authentication actually succeeded
+	if err := m.authMgr.VerifyAuthentication(client.apiClient); err != nil {
+		m.logger.Errorf("Authentication verification failed for vault '%s': %v", name, err)
+		return fmt.Errorf("authentication verification failed: %w", err)
 	}
 
 	m.activeVault = name

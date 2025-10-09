@@ -53,8 +53,8 @@ func (tp *TreePanel) Initialize() error {
 	// Set up keyboard navigation
 	tp.setupKeyboardNavigation()
 
-	// Load the initial tree
-	return tp.loadTree()
+	// Create an empty tree - tree will be automatically populated after profile selection
+	return tp.createEmptyTree("Loading secrets...")
 }
 
 // setupKeyboardNavigation sets up keyboard navigation for the tree
