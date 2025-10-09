@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -159,7 +160,16 @@ func (sp *SecretPanel) displaySecret(secret *vault.SecretNode) {
 	// Secret data
 	content.WriteString("[yellow]Data:[white]\n")
 	if secret.Data != nil {
-		for key, value := range secret.Data {
+		// Sort keys alphabetically
+		keys := make([]string, 0, len(secret.Data))
+		for key := range secret.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Display key-value pairs in sorted order
+		for _, key := range keys {
+			value := secret.Data[key]
 			content.WriteString(fmt.Sprintf("[green]%s[white]: ", key))
 
 			// Format the value
@@ -288,7 +298,16 @@ func (sp *SecretPanel) copyToClipboard() {
 
 	if secret.Data != nil {
 		clipboardContent.WriteString("Data:\n")
-		for key, value := range secret.Data {
+		// Sort keys alphabetically
+		keys := make([]string, 0, len(secret.Data))
+		for key := range secret.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Copy key-value pairs in sorted order
+		for _, key := range keys {
+			value := secret.Data[key]
 			clipboardContent.WriteString(fmt.Sprintf("  %s: %v\n", key, value))
 		}
 	}
@@ -365,8 +384,17 @@ func (sp *SecretPanel) showValueSelectionDialog(secret *vault.SecretNode) {
 	// Create a list of values
 	list := tview.NewList()
 
-	for key, value := range secret.Data {
-		key, value := key, value // Capture loop variables
+	// Sort keys alphabetically
+	keys := make([]string, 0, len(secret.Data))
+	for key := range secret.Data {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	// Add items in sorted order
+	for _, key := range keys {
+		key := key // Capture loop variable
+		value := secret.Data[key]
 		valueStr := fmt.Sprintf("%v", value)
 		list.AddItem(fmt.Sprintf("%s: %s", key, valueStr), "", 0, func() {
 			if err := clipboard.WriteAll(valueStr); err != nil {

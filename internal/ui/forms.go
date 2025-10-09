@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -225,7 +226,16 @@ func (fm *FormsManager) EditSecretForm(secretPath string, callback func()) tview
 
 	// Add fields for existing key-value pairs
 	if secret.Data != nil {
-		for key, value := range secret.Data {
+		// Sort keys alphabetically
+		keys := make([]string, 0, len(secret.Data))
+		for key := range secret.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Add fields in sorted order
+		for _, key := range keys {
+			value := secret.Data[key]
 			valueStr := fmt.Sprintf("%v", value)
 			form.AddInputField("Key: "+key, valueStr, 50, nil, nil)
 		}

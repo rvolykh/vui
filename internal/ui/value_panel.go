@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/rivo/tview"
@@ -85,7 +86,16 @@ func (vp *ValuePanel) displaySecretData(secret *vault.SecretNode) {
 	content.WriteString("[yellow]Secret Data:[white]\n\n")
 
 	if len(secret.Data) > 0 {
-		for key, value := range secret.Data {
+		// Sort keys alphabetically
+		keys := make([]string, 0, len(secret.Data))
+		for key := range secret.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Display key-value pairs in sorted order
+		for _, key := range keys {
+			value := secret.Data[key]
 			content.WriteString(fmt.Sprintf("[green]%s:[white]\n", key))
 
 			// Format the value (masked or unmasked)

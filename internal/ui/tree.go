@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/atotto/clipboard"
@@ -410,7 +411,15 @@ func (tp *TreePanel) expandSecret(node *tview.TreeNode, secret *vault.SecretNode
 
 	// Add child nodes for each key
 	if len(fullSecret.Data) > 0 {
+		// Sort keys alphabetically
+		keys := make([]string, 0, len(fullSecret.Data))
 		for key := range fullSecret.Data {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+
+		// Add child nodes in sorted order
+		for _, key := range keys {
 			tp.logger.Infof("Adding key: %s", key)
 
 			keyNode := tview.NewTreeNode("🔑 " + key).
