@@ -1,8 +1,7 @@
 package ui
 
 import (
-	"fmt"
-	"strings"
+	"sort"
 	"sync"
 	"time"
 
@@ -17,12 +16,13 @@ import (
 type VaultProfilesPanel struct {
 	config          *config.Config
 	vaultMgr        *vault.Manager
-	list            *tview.List
+	table           *tview.Table
 	app             *tview.Application
 	logger          *logrus.Logger
 	successCallback func() // Callback to switch to main layout
 	stopRefresh     chan struct{}
 	stopOnce        sync.Once
+	vaultNames      []string // Sorted list of vault names for selection tracking
 }
 
 // NewVaultProfilesPanel creates a new vault profiles panel
@@ -43,12 +43,14 @@ func (vpp *VaultProfilesPanel) SetSuccessCallback(callback func()) {
 
 // Initialize initializes the vault profiles panel
 func (vpp *VaultProfilesPanel) Initialize() error {
-	vpp.list = tview.NewList()
+	vpp.table = tview.NewTable()
 
-	// Set up the list appearance
-	vpp.list.SetBorder(true).
+	// Set up the table appearance
+	vpp.table.SetBorder(true).
 		SetTitle("Vault Profiles").
 		SetTitleAlign(tview.AlignLeft)
+	vpp.table.SetSelectable(true, false).
+		SetFixed(1, 0) // Fix the header row
 
 	// Set up keyboard navigation
 	vpp.setupKeyboardNavigation()
@@ -113,7 +115,7 @@ func (vpp *VaultProfilesPanel) hasConnectingProfiles() bool {
 
 // setupKeyboardNavigation sets up keyboard navigation
 func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
-	vpp.list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	vpp.table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEnter:
 			// Switch to selected vault
@@ -146,24 +148,42 @@ func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
 
 // loadProfiles loads and displays vault profiles
 func (vpp *VaultProfilesPanel) loadProfiles() error {
-	// Store the current selection
-	currentItem := vpp.list.GetCurrentItem()
+	// Store the current selection (row number, accounting for header)
+	currentRow, _ := vpp.table.GetSelection()
 
 	// Clear existing items
-	vpp.list.Clear()
+	vpp.table.Clear()
 
 	// Get available vaults
 	vaults := vpp.vaultMgr.ListVaults()
 
+	// Sort vaults by name (ascending)
+	sort.Strings(vaults)
+	vpp.vaultNames = vaults
+
+	// Create header row
+	headers := []string{"Name", "Address", "Status", "NOTE"}
+	for col, header := range headers {
+		cell := tview.NewTableCell(header).
+			SetTextColor(tcell.ColorYellow).
+			SetAlign(tview.AlignCenter).
+			SetSelectable(false).
+			SetAttributes(tcell.AttrBold)
+		vpp.table.SetCell(0, col, cell)
+	}
+
 	if len(vaults) == 0 {
-		vpp.list.AddItem("No vault profiles configured", "", 0, nil)
+		// Show a message when no vaults are configured
+		cell := tview.NewTableCell("No vault profiles configured").
+			SetAlign(tview.AlignCenter).
+			SetExpansion(1)
+		vpp.table.SetCell(1, 0, cell)
 		return nil
 	}
 
-	// Add each vault profile
+	// Add each vault profile as a row
+	row := 1
 	for _, vaultName := range vaults {
-		vaultName := vaultName // Capture loop variable
-
 		// Get connection status
 		status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
 		if err != nil {
@@ -171,80 +191,82 @@ func (vpp *VaultProfilesPanel) loadProfiles() error {
 			continue
 		}
 
-		// Format the display text
-		displayText := vpp.formatVaultDisplay(vaultName, status)
+		// Column 0: Name
+		nameCell := tview.NewTableCell(vaultName).
+			SetTextColor(tcell.ColorWhite).
+			SetAlign(tview.AlignLeft)
+		vpp.table.SetCell(row, 0, nameCell)
 
-		// Add to list
-		vpp.list.AddItem(displayText, "", 0, func() {
-			vpp.switchToVault(vaultName)
-		})
+		// Column 1: Address
+		addressCell := tview.NewTableCell(status.Address).
+			SetTextColor(tcell.ColorWhite).
+			SetAlign(tview.AlignLeft)
+		vpp.table.SetCell(row, 1, addressCell)
+
+		// Column 2: Status
+		statusText, statusColor := vpp.formatStatus(status)
+		statusCell := tview.NewTableCell(statusText).
+			SetTextColor(statusColor).
+			SetAlign(tview.AlignCenter)
+		vpp.table.SetCell(row, 2, statusCell)
+
+		// Column 3: NOTE (error message)
+		noteText := ""
+		if status.Error != "" {
+			noteText = status.Error
+		}
+		noteCell := tview.NewTableCell(noteText).
+			SetTextColor(tcell.ColorRed).
+			SetAlign(tview.AlignLeft).
+			SetMaxWidth(0). // Allow wrapping
+			SetExpansion(1) // Allow expansion for long text
+		vpp.table.SetCell(row, 3, noteCell)
+
+		row++
 	}
 
 	// Restore selection
-	if vpp.list.GetItemCount() > 0 {
-		if currentItem >= vpp.list.GetItemCount() {
-			vpp.list.SetCurrentItem(vpp.list.GetItemCount() - 1)
+	rowCount := vpp.table.GetRowCount()
+	if rowCount > 1 {
+		if currentRow >= rowCount {
+			vpp.table.Select(rowCount-1, 0)
+		} else if currentRow < 1 {
+			vpp.table.Select(1, 0) // Skip header
 		} else {
-			vpp.list.SetCurrentItem(currentItem)
+			vpp.table.Select(currentRow, 0)
 		}
 	}
 
 	return nil
 }
 
-// formatVaultDisplay formats the vault display text with status
-func (vpp *VaultProfilesPanel) formatVaultDisplay(name string, status *vault.ConnectionStatus) string {
-	var statusIcon string
-	var statusText string
-
+// formatStatus formats the status text and color
+func (vpp *VaultProfilesPanel) formatStatus(status *vault.ConnectionStatus) (string, tcell.Color) {
 	if status.Connecting {
-		statusIcon = "⏳"
-		statusText = "Connecting"
+		return "⏳ Connecting", tcell.ColorYellow
 	} else if status.Connected {
 		if status.Sealed {
-			statusIcon = "🔒"
-			statusText = "Sealed"
+			return "🔒 Sealed", tcell.ColorOrange
 		} else {
-			statusIcon = "✅"
-			statusText = "Connected"
+			return "✅ Connected", tcell.ColorGreen
 		}
 	} else {
-		statusIcon = "❌"
-		statusText = "Disconnected"
+		return "❌ Disconnected", tcell.ColorRed
 	}
-
-	// Build the display text
-	var parts []string
-	parts = append(parts, fmt.Sprintf("%s %s", statusIcon, name))
-	parts = append(parts, fmt.Sprintf("Status: %s", statusText))
-	parts = append(parts, fmt.Sprintf("Address: %s", status.Address))
-
-	if status.Version != "" {
-		parts = append(parts, fmt.Sprintf("Version: %s", status.Version))
-	}
-
-	if status.Error != "" {
-		parts = append(parts, fmt.Sprintf("Error: %s", status.Error))
-	}
-
-	return strings.Join(parts, " | ")
 }
 
 // switchToSelectedVault switches to the currently selected vault
 func (vpp *VaultProfilesPanel) switchToSelectedVault() {
-	currentItem := vpp.list.GetCurrentItem()
-	if currentItem < 0 {
+	row, _ := vpp.table.GetSelection()
+	// Row 0 is header, data starts at row 1
+	if row < 1 || row > len(vpp.vaultNames) {
 		return
 	}
 	vpp.StopRefresher()
 
-	// Get the vault name from the display text
-	mainText, _ := vpp.list.GetItemText(currentItem)
-	vaultName := vpp.extractVaultName(mainText)
-
-	if vaultName != "" {
-		vpp.switchToVault(vaultName)
-	}
+	// Get the vault name from the sorted list (row-1 because row 0 is header)
+	vaultName := vpp.vaultNames[row-1]
+	vpp.switchToVault(vaultName)
 }
 
 // switchToVault switches to a specific vault
@@ -291,35 +313,15 @@ func (vpp *VaultProfilesPanel) addNewVault() {
 
 // deleteSelectedVault deletes the selected vault profile
 func (vpp *VaultProfilesPanel) deleteSelectedVault() {
-	currentItem := vpp.list.GetCurrentItem()
-	if currentItem < 0 {
+	row, _ := vpp.table.GetSelection()
+	// Row 0 is header, data starts at row 1
+	if row < 1 || row > len(vpp.vaultNames) {
 		return
 	}
 
-	// Get the vault name from the display text
-	mainText, _ := vpp.list.GetItemText(currentItem)
-	vaultName := vpp.extractVaultName(mainText)
-
-	if vaultName != "" {
-		vpp.logger.Infof("Delete vault: %s (not implemented yet)", vaultName)
-	}
-}
-
-// extractVaultName extracts the vault name from the display text
-func (vpp *VaultProfilesPanel) extractVaultName(displayText string) string {
-	// The display text format is: "ICON VaultName | Status: ... | Address: ..."
-	parts := strings.Split(displayText, " | ")
-	if len(parts) > 0 {
-		// Split by whitespace to separate icon from vault name
-		firstPart := strings.TrimSpace(parts[0])
-		fields := strings.Fields(firstPart)
-
-		// The first field is the emoji icon, the second is the vault name
-		if len(fields) >= 2 {
-			return fields[1]
-		}
-	}
-	return ""
+	// Get the vault name from the sorted list (row-1 because row 0 is header)
+	vaultName := vpp.vaultNames[row-1]
+	vpp.logger.Infof("Delete vault: %s (not implemented yet)", vaultName)
 }
 
 // Refresh refreshes the profiles display
@@ -332,5 +334,5 @@ func (vpp *VaultProfilesPanel) Refresh() {
 
 // GetPrimitive returns the underlying tview primitive
 func (vpp *VaultProfilesPanel) GetPrimitive() tview.Primitive {
-	return vpp.list
+	return vpp.table
 }

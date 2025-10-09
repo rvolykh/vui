@@ -131,7 +131,8 @@ Secret Panel:
   e       Edit selected secret
 
 Vault Management:
-  Ctrl+v  Switch vault
+  Tab     Switch vault profiles (shows profiles table)
+  Ctrl+v  Switch vault profiles (shows profiles table)
   Ctrl+n  Add new vault
   Ctrl+r  Refresh vault connection
 
@@ -158,48 +159,9 @@ func (a *App) refresh() {
 	a.layout.Refresh()
 }
 
-// switchVault shows the vault switching dialog
+// switchVault shows the vault profiles screen for switching vaults
 func (a *App) switchVault() {
-	vaults := a.vaultMgr.ListVaults()
-
-	if len(vaults) == 0 {
-		a.showError("No vaults available")
-		return
-	}
-
-	// Create a list of vaults
-	list := tview.NewList()
-	for _, vault := range vaults {
-		vault := vault // Capture loop variable
-		list.AddItem(vault, "", 0, func() {
-			if err := a.vaultMgr.SwitchVault(vault); err != nil {
-				a.showError(fmt.Sprintf("Failed to switch to vault '%s': %v", vault, err))
-				return
-			}
-
-			// Refresh the layout with new vault
-			if err := a.layout.Initialize(); err != nil {
-				a.showError(fmt.Sprintf("Failed to initialize layout: %v", err))
-				return
-			}
-
-			a.uiApp.SetRoot(a.layout.GetRoot(), true)
-		})
-	}
-
-	list.SetTitle("Select Vault").
-		SetBorder(true)
-
-	// Set up the list to handle selection
-	list.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
-		// The selection is handled in the AddItem callback above
-	})
-
-	list.SetDoneFunc(func() {
-		a.uiApp.SetRoot(a.layout.GetRoot(), true)
-	})
-
-	a.uiApp.SetRoot(list, true)
+	a.showVaultProfiles()
 }
 
 // showVaultProfiles shows the vault profiles screen
@@ -228,22 +190,31 @@ func (a *App) showVaultProfiles() {
 		SetDirection(tview.FlexRow)
 
 	// Add welcome message
+	connectedVaults := a.vaultMgr.GetConnectedConnections()
+	var statusText string
+	if len(connectedVaults) == 0 {
+		statusText = "No vault servers are currently connected. Please select a vault profile below to connect."
+	} else {
+		statusText = "Select a vault profile to switch to a different vault."
+	}
+
 	welcomeText := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(`[yellow]Welcome to VUI - Vault UI[white]
+		SetText(fmt.Sprintf(`[yellow]Welcome to VUI - Vault UI[white]
 
 [yellow]Connection Status:[white]
-No vault servers are currently connected. Please select a vault profile below to connect.
+%s
 
 [yellow]Navigation:[white]
 • Use arrow keys to navigate
 • Press Enter to connect to a vault
 • Press 'r' to refresh connection status
 • Press 'n' to add a new vault profile
+• Press Esc to go back (if connected)
 • Press F1 for help
 • Press Ctrl+C to exit
 
-[yellow]Available Vault Profiles:[white]`)
+[yellow]Available Vault Profiles:[white]`, statusText))
 
 	mainLayout.AddItem(welcomeText, 0, 1, false)
 	mainLayout.AddItem(profilesPanel.GetPrimitive(), 0, 2, true)
@@ -251,6 +222,16 @@ No vault servers are currently connected. Please select a vault profile below to
 	// Set up keyboard shortcuts for the profiles screen
 	mainLayout.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
+		case tcell.KeyEsc:
+			// Go back to main layout if we have a connected vault
+			connectedVaults := a.vaultMgr.GetConnectedConnections()
+			if len(connectedVaults) > 0 {
+				profilesPanel.StopRefresher()
+				a.uiApp.SetRoot(a.layout.GetRoot(), true)
+				return nil
+			}
+			// If no connected vaults, stay on profiles screen
+			return nil
 		case tcell.KeyF1:
 			// Show help
 			a.showHelp()
