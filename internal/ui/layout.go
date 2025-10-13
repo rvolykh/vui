@@ -5,6 +5,8 @@ import (
 
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/ui/common"
+	"github.com/rvolykh/vui/internal/ui/panels"
 	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
@@ -14,12 +16,12 @@ type Layout struct {
 	config        *config.Config
 	vaultMgr      *vault.Manager
 	root          *tview.Flex
-	helpPanel     *HelpPanel
-	treePanel     *TreePanel
-	metadataPanel *MetadataPanel
-	valuePanel    *ValuePanel
-	statusBar     *StatusBar
-	modal         tview.Primitive
+	helpPanel     *panels.HelpPanel
+	treePanel     *panels.TreePanel
+	metadataPanel *panels.MetadataPanel
+	valuePanel    *panels.ValuePanel
+	statusBar     *panels.StatusBar
+	dialogSvc     *common.DialogService
 	app           *tview.Application
 	logger        *logrus.Logger
 }
@@ -43,37 +45,40 @@ func (l *Layout) Initialize() error {
 	l.logger.Info("Initializing UI layout")
 
 	// Create the help panel
-	l.helpPanel = NewHelpPanel(l.config, l.vaultMgr, l.logger)
+	l.helpPanel = panels.NewHelpPanel(l.config, l.vaultMgr, l.logger)
 	if err := l.helpPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize help panel: %w", err)
 	}
 
 	// Create the tree panel
-	l.treePanel = NewTreePanel(l.config, l.vaultMgr, l.logger, l.app)
+	l.treePanel = panels.NewTreePanel(l.config, l.vaultMgr, l.logger, l.app)
 	if err := l.treePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize tree panel: %w", err)
 	}
 
 	// Create the metadata panel
-	l.metadataPanel = NewMetadataPanel(l.config, l.vaultMgr, l.logger)
+	l.metadataPanel = panels.NewMetadataPanel(l.config, l.vaultMgr, l.logger)
 	if err := l.metadataPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize metadata panel: %w", err)
 	}
 
 	// Create the value panel
-	l.valuePanel = NewValuePanel(l.config, l.vaultMgr, l.logger)
+	l.valuePanel = panels.NewValuePanel(l.config, l.vaultMgr, l.logger)
 	if err := l.valuePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize value panel: %w", err)
 	}
 
 	// Create the status bar
-	l.statusBar = NewStatusBar(l.config, l.vaultMgr, l.logger)
+	l.statusBar = panels.NewStatusBar(l.config, l.vaultMgr, l.logger)
 	if err := l.statusBar.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize status bar: %w", err)
 	}
 
 	// Set up the layout
 	l.setupLayout()
+
+	// Create dialog service
+	l.dialogSvc = common.NewDialogService(l.app, l.root)
 
 	// Set up event handlers
 	l.setupEventHandlers()
@@ -212,42 +217,43 @@ func (l *Layout) Refresh() {
 }
 
 // GetTreePanel returns the tree panel
-func (l *Layout) GetTreePanel() *TreePanel {
+func (l *Layout) GetTreePanel() *panels.TreePanel {
 	return l.treePanel
 }
 
 // GetMetadataPanel returns the metadata panel
-func (l *Layout) GetMetadataPanel() *MetadataPanel {
+func (l *Layout) GetMetadataPanel() *panels.MetadataPanel {
 	return l.metadataPanel
 }
 
 // GetValuePanel returns the value panel
-func (l *Layout) GetValuePanel() *ValuePanel {
+func (l *Layout) GetValuePanel() *panels.ValuePanel {
 	return l.valuePanel
 }
 
 // GetStatusBar returns the status bar
-func (l *Layout) GetStatusBar() *StatusBar {
+func (l *Layout) GetStatusBar() *panels.StatusBar {
 	return l.statusBar
 }
 
 // showModal shows or hides a modal dialog
 func (l *Layout) showModal(primitive tview.Primitive, show bool) {
-	if l.app == nil {
-		l.logger.Warn("Cannot show modal: application reference not set")
+	if l.dialogSvc == nil {
+		l.logger.Warn("Cannot show modal: dialog service not initialized")
 		return
 	}
 
 	if show {
-		l.modal = primitive
-		l.app.SetRoot(primitive, true)
+		l.dialogSvc.Show(primitive)
 	} else {
-		l.modal = nil
-		l.app.SetRoot(l.root, true)
+		l.dialogSvc.Hide()
 	}
 }
 
 // HasActiveModal returns true if a modal is currently displayed
 func (l *Layout) HasActiveModal() bool {
-	return l.modal != nil
+	if l.dialogSvc == nil {
+		return false
+	}
+	return l.dialogSvc.IsModalActive()
 }

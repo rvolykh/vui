@@ -1,14 +1,15 @@
-package ui
+package panels
 
 import (
 	"fmt"
 	"sort"
 	"strings"
 
-	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/ui/forms"
+	"github.com/rvolykh/vui/internal/ui/handlers"
 	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
@@ -19,7 +20,8 @@ type TreePanel struct {
 	vaultMgr         *vault.Manager
 	tree             *tview.TreeView
 	rootNode         *tview.TreeNode
-	formsMgr         *FormsManager
+	formsMgr         *forms.FormsManager
+	clipboardHandler *handlers.ClipboardHandler
 	selectionHandler func(*vault.SecretNode, string)
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
@@ -31,11 +33,12 @@ type TreePanel struct {
 // NewTreePanel creates a new tree panel
 func NewTreePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *TreePanel {
 	return &TreePanel{
-		config:   config,
-		vaultMgr: vaultMgr,
-		formsMgr: NewFormsManager(config, vaultMgr, logger, app),
-		app:      app,
-		logger:   logger,
+		config:           config,
+		vaultMgr:         vaultMgr,
+		formsMgr:         forms.NewFormsManager(config, vaultMgr, logger, app),
+		clipboardHandler: handlers.NewClipboardHandler(vaultMgr),
+		app:              app,
+		logger:           logger,
 	}
 }
 
@@ -632,72 +635,20 @@ func (tp *TreePanel) copySecretValue() {
 
 // copyKeyValue copies a specific key's value from a secret
 func (tp *TreePanel) copyKeyValue(secret *vault.SecretNode, key string) {
-	secretsManager, err := tp.vaultMgr.GetSecretsManager()
-	if err != nil {
-		tp.logger.Errorf("Failed to get secrets manager: %v", err)
+	if err := tp.clipboardHandler.CopyKeyValue(secret, key); err != nil {
+		tp.logger.Errorf("Failed to copy key value: %v", err)
 		return
 	}
-
-	fullSecret, err := secretsManager.GetSecret(secret.Path)
-	if err != nil {
-		tp.logger.Errorf("Failed to get secret: %v", err)
-		return
-	}
-
-	if value, ok := fullSecret.Data[key]; ok {
-		valueStr := fmt.Sprintf("%v", value)
-		if err := clipboard.WriteAll(valueStr); err != nil {
-			tp.logger.Errorf("Failed to copy value to clipboard: %v", err)
-			return
-		}
-		tp.logger.Infof("Copied key '%s' value to clipboard", key)
-	}
+	tp.logger.Infof("Copied key '%s' value to clipboard", key)
 }
 
 // copySecretValues copies all values from a secret (or single value if only one key)
 func (tp *TreePanel) copySecretValues(secret *vault.SecretNode) {
-	secretsManager, err := tp.vaultMgr.GetSecretsManager()
-	if err != nil {
-		tp.logger.Errorf("Failed to get secrets manager: %v", err)
+	if err := tp.clipboardHandler.CopySecretValues(secret); err != nil {
+		tp.logger.Errorf("Failed to copy secret values: %v", err)
 		return
 	}
-
-	fullSecret, err := secretsManager.GetSecret(secret.Path)
-	if err != nil {
-		tp.logger.Errorf("Failed to get secret: %v", err)
-		return
-	}
-
-	if len(fullSecret.Data) == 0 {
-		tp.logger.Warn("No data in secret")
-		return
-	}
-
-	// If there's only one key, copy just the value
-	if len(fullSecret.Data) == 1 {
-		for _, value := range fullSecret.Data {
-			valueStr := fmt.Sprintf("%v", value)
-			if err := clipboard.WriteAll(valueStr); err != nil {
-				tp.logger.Errorf("Failed to copy value to clipboard: %v", err)
-				return
-			}
-			tp.logger.Info("Copied value to clipboard")
-			return
-		}
-	}
-
-	// Multiple values - copy all values (one per line)
-	var values []string
-	for _, value := range fullSecret.Data {
-		values = append(values, fmt.Sprintf("%v", value))
-	}
-	valueStr := strings.Join(values, "\n")
-
-	if err := clipboard.WriteAll(valueStr); err != nil {
-		tp.logger.Errorf("Failed to copy values to clipboard: %v", err)
-		return
-	}
-	tp.logger.Info("Copied all values to clipboard")
+	tp.logger.Info("Copied secret values to clipboard")
 }
 
 // showModal shows or hides a modal
