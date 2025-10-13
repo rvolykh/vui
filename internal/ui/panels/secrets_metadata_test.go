@@ -10,34 +10,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewMetadataPanel(t *testing.T) {
+func TestNewSecretsMetadata(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 
 	assert.NotNil(t, panel)
 }
 
-func TestMetadataPanel_Initialize(t *testing.T) {
+func TestSecretsMetadata_Initialize(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 	err := panel.Initialize()
 
 	assert.NoError(t, err)
 	assert.NotNil(t, panel.GetPrimitive())
 }
 
-func TestMetadataPanel_ShowSecret(t *testing.T) {
+func TestSecretsMetadata_ShowSecret(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{
@@ -60,12 +60,12 @@ func TestMetadataPanel_ShowSecret(t *testing.T) {
 	assert.Equal(t, secret, panel.currentSecret)
 }
 
-func TestMetadataPanel_ShowDirectory(t *testing.T) {
+func TestSecretsMetadata_ShowDirectory(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	panel.ShowDirectory("secrets/test", 5)
@@ -73,12 +73,12 @@ func TestMetadataPanel_ShowDirectory(t *testing.T) {
 	assert.Nil(t, panel.currentSecret)
 }
 
-func TestMetadataPanel_ShowKey(t *testing.T) {
+func TestSecretsMetadata_ShowKey(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{
@@ -95,12 +95,12 @@ func TestMetadataPanel_ShowKey(t *testing.T) {
 	assert.Equal(t, secret, panel.currentSecret)
 }
 
-func TestMetadataPanel_Refresh(t *testing.T) {
+func TestSecretsMetadata_Refresh(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewMetadataPanel(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{

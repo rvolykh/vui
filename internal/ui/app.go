@@ -218,7 +218,7 @@ func (a *App) showVaultProfiles() {
 	a.onProfilesScreen = true
 
 	// Create vault profiles panel
-	profilesPanel := panels.NewVaultProfilesPanel(a.config, a.vaultMgr, a.uiApp, a.logger)
+	profilesPanel := panels.NewProfilesTable(a.config, a.vaultMgr, a.uiApp, a.logger)
 	if err := profilesPanel.Initialize(); err != nil {
 		a.logger.Errorf("Failed to initialize vault profiles panel: %v", err)
 		a.showError("Failed to initialize vault profiles")
@@ -337,6 +337,6 @@ func (a *App) GetLayout() *Layout {
 
 // buildWelcomeText creates a formatted welcome panel with connection status and navigation info
 func (a *App) buildWelcomeText() *tview.TextView {
-	welcomeScreen := panels.NewWelcomeScreen(a.vaultMgr, a.hasActiveConnection)
+	welcomeScreen := panels.NewProfilesTitle(a.vaultMgr, a.hasActiveConnection)
 	return welcomeScreen.Build()
 }

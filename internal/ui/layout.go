@@ -16,11 +16,11 @@ type Layout struct {
 	config        *config.Config
 	vaultMgr      *vault.Manager
 	root          *tview.Flex
-	helpPanel     *panels.HelpPanel
-	treePanel     *panels.TreePanel
-	metadataPanel *panels.MetadataPanel
-	valuePanel    *panels.ValuePanel
-	statusBar     *panels.StatusBar
+	helpPanel     *panels.SecretsTitle
+	treePanel     *panels.SecretsTree
+	metadataPanel *panels.SecretsMetadata
+	valuePanel    *panels.SecretsValue
+	statusBar     *panels.SecretsStatus
 	dialogSvc     *common.DialogService
 	app           *tview.Application
 	logger        *logrus.Logger
@@ -45,31 +45,31 @@ func (l *Layout) Initialize() error {
 	l.logger.Info("Initializing UI layout")
 
 	// Create the help panel
-	l.helpPanel = panels.NewHelpPanel(l.config, l.vaultMgr, l.logger)
+	l.helpPanel = panels.NewSecretsTitle(l.config, l.vaultMgr, l.logger)
 	if err := l.helpPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize help panel: %w", err)
 	}
 
 	// Create the tree panel
-	l.treePanel = panels.NewTreePanel(l.config, l.vaultMgr, l.logger, l.app)
+	l.treePanel = panels.NewSecretsTree(l.config, l.vaultMgr, l.logger, l.app)
 	if err := l.treePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize tree panel: %w", err)
 	}
 
 	// Create the metadata panel
-	l.metadataPanel = panels.NewMetadataPanel(l.config, l.vaultMgr, l.logger)
+	l.metadataPanel = panels.NewSecretsMetadata(l.config, l.vaultMgr, l.logger)
 	if err := l.metadataPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize metadata panel: %w", err)
 	}
 
 	// Create the value panel
-	l.valuePanel = panels.NewValuePanel(l.config, l.vaultMgr, l.logger)
+	l.valuePanel = panels.NewSecretsValue(l.config, l.vaultMgr, l.logger)
 	if err := l.valuePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize value panel: %w", err)
 	}
 
 	// Create the status bar
-	l.statusBar = panels.NewStatusBar(l.config, l.vaultMgr, l.logger)
+	l.statusBar = panels.NewSecretsStatus(l.config, l.vaultMgr, l.logger)
 	if err := l.statusBar.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize status bar: %w", err)
 	}
@@ -217,22 +217,22 @@ func (l *Layout) Refresh() {
 }
 
 // GetTreePanel returns the tree panel
-func (l *Layout) GetTreePanel() *panels.TreePanel {
+func (l *Layout) GetTreePanel() *panels.SecretsTree {
 	return l.treePanel
 }
 
 // GetMetadataPanel returns the metadata panel
-func (l *Layout) GetMetadataPanel() *panels.MetadataPanel {
+func (l *Layout) GetMetadataPanel() *panels.SecretsMetadata {
 	return l.metadataPanel
 }
 
 // GetValuePanel returns the value panel
-func (l *Layout) GetValuePanel() *panels.ValuePanel {
+func (l *Layout) GetValuePanel() *panels.SecretsValue {
 	return l.valuePanel
 }
 
 // GetStatusBar returns the status bar
-func (l *Layout) GetStatusBar() *panels.StatusBar {
+func (l *Layout) GetStatusBar() *panels.SecretsStatus {
 	return l.statusBar
 }
 

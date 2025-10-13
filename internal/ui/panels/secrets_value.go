@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ValuePanel represents the secret value display panel
-type ValuePanel struct {
+// SecretsValue represents the secret value display panel
+type SecretsValue struct {
 	config        *config.Config
 	vaultMgr      *vault.Manager
 	textView      *tview.TextView
@@ -22,9 +22,9 @@ type ValuePanel struct {
 	logger        *logrus.Logger
 }
 
-// NewValuePanel creates a new value panel
-func NewValuePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *ValuePanel {
-	return &ValuePanel{
+// NewSecretsValue creates a new secrets value panel
+func NewSecretsValue(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsValue {
+	return &SecretsValue{
 		config:   config,
 		vaultMgr: vaultMgr,
 		isMasked: true, // Values are masked by default
@@ -32,8 +32,8 @@ func NewValuePanel(config *config.Config, vaultMgr *vault.Manager, logger *logru
 	}
 }
 
-// Initialize initializes the value panel
-func (vp *ValuePanel) Initialize() error {
+// Initialize initializes the secrets value panel
+func (vp *SecretsValue) Initialize() error {
 	vp.textView = tview.NewTextView()
 
 	// Set up the text view appearance
@@ -53,7 +53,7 @@ func (vp *ValuePanel) Initialize() error {
 }
 
 // ShowSecret displays all key-value pairs of a secret
-func (vp *ValuePanel) ShowSecret(secret *vault.SecretNode) {
+func (vp *SecretsValue) ShowSecret(secret *vault.SecretNode) {
 	vp.currentSecret = secret
 	vp.currentKey = ""
 	vp.isMasked = true // Reset to masked when showing a new secret
@@ -61,7 +61,7 @@ func (vp *ValuePanel) ShowSecret(secret *vault.SecretNode) {
 }
 
 // ShowKey displays a specific key's value from a secret
-func (vp *ValuePanel) ShowKey(secret *vault.SecretNode, key string) {
+func (vp *SecretsValue) ShowKey(secret *vault.SecretNode, key string) {
 	vp.currentSecret = secret
 	vp.currentKey = key
 	vp.isMasked = true // Reset to masked when showing a new key
@@ -69,7 +69,7 @@ func (vp *ValuePanel) ShowKey(secret *vault.SecretNode, key string) {
 }
 
 // ShowDirectory displays directory information
-func (vp *ValuePanel) ShowDirectory(path string) {
+func (vp *SecretsValue) ShowDirectory(path string) {
 	vp.currentSecret = nil
 	vp.currentKey = ""
 	content := fmt.Sprintf(`[yellow]Directory:[white] %s
@@ -80,7 +80,7 @@ Select a secret to view its contents.[white]`, path)
 }
 
 // displaySecretData displays all key-value pairs of a secret
-func (vp *ValuePanel) displaySecretData(secret *vault.SecretNode) {
+func (vp *SecretsValue) displaySecretData(secret *vault.SecretNode) {
 	var content strings.Builder
 
 	content.WriteString("[yellow]Secret Data:[white]\n\n")
@@ -115,7 +115,7 @@ func (vp *ValuePanel) displaySecretData(secret *vault.SecretNode) {
 }
 
 // displayKeyValue displays a specific key's value
-func (vp *ValuePanel) displayKeyValue(secret *vault.SecretNode, key string) {
+func (vp *SecretsValue) displayKeyValue(secret *vault.SecretNode, key string) {
 	var content strings.Builder
 
 	content.WriteString(fmt.Sprintf("[yellow]Key:[white] [green]%s[white]\n\n", key))
@@ -140,7 +140,7 @@ func (vp *ValuePanel) displayKeyValue(secret *vault.SecretNode, key string) {
 }
 
 // formatValue formats a value for display
-func (vp *ValuePanel) formatValue(value interface{}) string {
+func (vp *SecretsValue) formatValue(value interface{}) string {
 	switch v := value.(type) {
 	case string:
 		return v
@@ -152,7 +152,7 @@ func (vp *ValuePanel) formatValue(value interface{}) string {
 }
 
 // showDefaultMessage shows the default message
-func (vp *ValuePanel) showDefaultMessage() {
+func (vp *SecretsValue) showDefaultMessage() {
 	content := `[yellow]Secret Value[white]
 
 Select a secret from the tree to view its values.
@@ -171,7 +171,7 @@ Select a secret from the tree to view its values.
 }
 
 // ToggleMasking toggles the masking of secret values (public for TreePanel)
-func (vp *ValuePanel) ToggleMasking() {
+func (vp *SecretsValue) ToggleMasking() {
 	vp.isMasked = !vp.isMasked
 	vp.logger.Infof("Toggled value masking: masked=%v", vp.isMasked)
 
@@ -186,7 +186,7 @@ func (vp *ValuePanel) ToggleMasking() {
 }
 
 // Refresh refreshes the value panel
-func (vp *ValuePanel) Refresh() {
+func (vp *SecretsValue) Refresh() {
 	if vp.currentSecret != nil {
 		if vp.currentKey != "" {
 			vp.displayKeyValue(vp.currentSecret, vp.currentKey)
@@ -199,6 +199,6 @@ func (vp *ValuePanel) Refresh() {
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (vp *ValuePanel) GetPrimitive() tview.Primitive {
+func (vp *SecretsValue) GetPrimitive() tview.Primitive {
 	return vp.textView
 }

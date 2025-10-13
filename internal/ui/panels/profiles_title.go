@@ -10,22 +10,22 @@ import (
 	"github.com/rvolykh/vui/internal/vault"
 )
 
-// WelcomeScreen represents the welcome/connection screen
-type WelcomeScreen struct {
+// ProfilesTitle represents the welcome/connection screen
+type ProfilesTitle struct {
 	vaultMgr      *vault.Manager
 	hasActiveConn bool
 }
 
-// NewWelcomeScreen creates a new welcome screen
-func NewWelcomeScreen(vaultMgr *vault.Manager, hasActiveConnection bool) *WelcomeScreen {
-	return &WelcomeScreen{
+// NewProfilesTitle creates a new welcome screen
+func NewProfilesTitle(vaultMgr *vault.Manager, hasActiveConnection bool) *ProfilesTitle {
+	return &ProfilesTitle{
 		vaultMgr:      vaultMgr,
 		hasActiveConn: hasActiveConnection,
 	}
 }
 
 // Build creates the welcome screen text view
-func (ws *WelcomeScreen) Build() *tview.TextView {
+func (ws *ProfilesTitle) Build() *tview.TextView {
 	textView := tview.NewTextView().
 		SetDynamicColors(true).
 		SetWordWrap(false)
@@ -45,7 +45,7 @@ func (ws *WelcomeScreen) Build() *tview.TextView {
 }
 
 // buildContent generates the welcome text content for a given width
-func (ws *WelcomeScreen) buildContent(width int) string {
+func (ws *ProfilesTitle) buildContent(width int) string {
 	// Ensure minimum width
 	if width < 60 {
 		width = 60
@@ -132,7 +132,7 @@ func (ws *WelcomeScreen) buildContent(width int) string {
 }
 
 // getConnectionStatus returns the formatted connection status string
-func (ws *WelcomeScreen) getConnectionStatus() string {
+func (ws *ProfilesTitle) getConnectionStatus() string {
 	if ws.hasActiveConn {
 		activeVault := ws.vaultMgr.GetActiveVault()
 		if activeVault != "" {
@@ -150,7 +150,7 @@ type navigationItem struct {
 }
 
 // getNavigationItems returns the list of navigation items
-func (ws *WelcomeScreen) getNavigationItems() []navigationItem {
+func (ws *ProfilesTitle) getNavigationItems() []navigationItem {
 	items := []navigationItem{
 		{"↑/↓", "Navigate profiles"},
 		{"Enter", "Connect to profile"},

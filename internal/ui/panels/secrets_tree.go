@@ -14,8 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TreePanel represents the secrets tree panel
-type TreePanel struct {
+// SecretsTree represents the secrets tree panel
+type SecretsTree struct {
 	config           *config.Config
 	vaultMgr         *vault.Manager
 	tree             *tview.TreeView
@@ -25,14 +25,14 @@ type TreePanel struct {
 	selectionHandler func(*vault.SecretNode, string)
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
-	valuePanel       *ValuePanel                 // Reference to value panel for mask toggle
+	valuePanel       *SecretsValue               // Reference to value panel for mask toggle
 	app              *tview.Application
 	logger           *logrus.Logger
 }
 
-// NewTreePanel creates a new tree panel
-func NewTreePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *TreePanel {
-	return &TreePanel{
+// NewSecretsTree creates a new tree panel
+func NewSecretsTree(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *SecretsTree {
+	return &SecretsTree{
 		config:           config,
 		vaultMgr:         vaultMgr,
 		formsMgr:         forms.NewFormsManager(config, vaultMgr, logger, app),
@@ -43,7 +43,7 @@ func NewTreePanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus
 }
 
 // Initialize initializes the tree panel
-func (tp *TreePanel) Initialize() error {
+func (tp *SecretsTree) Initialize() error {
 	tp.tree = tview.NewTreeView()
 
 	// Set up the tree appearance
@@ -64,7 +64,7 @@ func (tp *TreePanel) Initialize() error {
 }
 
 // setupKeyboardNavigation sets up keyboard navigation for the tree
-func (tp *TreePanel) setupKeyboardNavigation() {
+func (tp *SecretsTree) setupKeyboardNavigation() {
 	tp.tree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEnter, tcell.KeyRight:
@@ -117,7 +117,7 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 }
 
 // loadTree loads the secrets tree
-func (tp *TreePanel) loadTree() error {
+func (tp *SecretsTree) loadTree() error {
 	tp.logger.Info("Loading secrets tree...")
 
 	secretsManager, err := tp.vaultMgr.GetSecretsManager()
@@ -148,7 +148,7 @@ func (tp *TreePanel) loadTree() error {
 }
 
 // createEmptyTree creates an empty tree with a message
-func (tp *TreePanel) createEmptyTree(message string) error {
+func (tp *SecretsTree) createEmptyTree(message string) error {
 	rootNode := tview.NewTreeNode("secrets").
 		SetSelectable(true)
 
@@ -169,7 +169,7 @@ func (tp *TreePanel) createEmptyTree(message string) error {
 }
 
 // buildTree builds the tree structure recursively
-func (tp *TreePanel) buildTree(secretsManager *vault.SecretsManager, path string) (*tview.TreeNode, error) {
+func (tp *SecretsTree) buildTree(secretsManager *vault.SecretsManager, path string) (*tview.TreeNode, error) {
 	tp.logger.Infof("Building tree for path: '%s'", path)
 
 	// Get secrets at this path
@@ -224,7 +224,7 @@ func (tp *TreePanel) buildTree(secretsManager *vault.SecretsManager, path string
 }
 
 // handleNodeChanged handles when the selected node changes (navigation)
-func (tp *TreePanel) handleNodeChanged(node *tview.TreeNode) {
+func (tp *SecretsTree) handleNodeChanged(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if reference == nil {
 		return
@@ -261,7 +261,7 @@ func (tp *TreePanel) handleNodeChanged(node *tview.TreeNode) {
 }
 
 // handleNodeSelection handles when a tree node is explicitly selected (Enter/Right arrow)
-func (tp *TreePanel) handleNodeSelection(node *tview.TreeNode) {
+func (tp *SecretsTree) handleNodeSelection(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if reference == nil {
 		tp.logger.Debug("Node selection: no reference found")
@@ -293,7 +293,7 @@ func (tp *TreePanel) handleNodeSelection(node *tview.TreeNode) {
 }
 
 // expandDirectory expands a directory node
-func (tp *TreePanel) expandDirectory(node *tview.TreeNode, path string) {
+func (tp *SecretsTree) expandDirectory(node *tview.TreeNode, path string) {
 	tp.logger.Infof("Expanding directory: %s", path)
 
 	// Check if already loaded (has children)
@@ -367,7 +367,7 @@ func (tp *TreePanel) expandDirectory(node *tview.TreeNode, path string) {
 }
 
 // expandSecret expands a secret node to show its keys
-func (tp *TreePanel) expandSecret(node *tview.TreeNode, secret *vault.SecretNode) {
+func (tp *SecretsTree) expandSecret(node *tview.TreeNode, secret *vault.SecretNode) {
 	tp.logger.Infof("Expanding secret: %s", secret.Path)
 
 	// Check if already loaded (has children)
@@ -441,7 +441,7 @@ func (tp *TreePanel) expandSecret(node *tview.TreeNode, secret *vault.SecretNode
 }
 
 // findParentNode finds the parent node of a given node
-func (tp *TreePanel) findParentNode(targetNode *tview.TreeNode) *tview.TreeNode {
+func (tp *SecretsTree) findParentNode(targetNode *tview.TreeNode) *tview.TreeNode {
 	if tp.rootNode == nil {
 		return nil
 	}
@@ -449,7 +449,7 @@ func (tp *TreePanel) findParentNode(targetNode *tview.TreeNode) *tview.TreeNode 
 }
 
 // findParentNodeRecursive recursively searches for the parent of a target node
-func (tp *TreePanel) findParentNodeRecursive(current *tview.TreeNode, target *tview.TreeNode) *tview.TreeNode {
+func (tp *SecretsTree) findParentNodeRecursive(current *tview.TreeNode, target *tview.TreeNode) *tview.TreeNode {
 	children := current.GetChildren()
 	for _, child := range children {
 		if child == target {
@@ -463,7 +463,7 @@ func (tp *TreePanel) findParentNodeRecursive(current *tview.TreeNode, target *tv
 }
 
 // createSecret creates a new secret
-func (tp *TreePanel) createSecret() {
+func (tp *SecretsTree) createSecret() {
 	// Get current selection
 	node := tp.tree.GetCurrentNode()
 	if node == nil {
@@ -498,7 +498,7 @@ func (tp *TreePanel) createSecret() {
 }
 
 // editSecret edits the selected secret
-func (tp *TreePanel) editSecret() {
+func (tp *SecretsTree) editSecret() {
 	node := tp.tree.GetCurrentNode()
 	if node == nil {
 		return
@@ -527,7 +527,7 @@ func (tp *TreePanel) editSecret() {
 }
 
 // deleteSecret deletes the selected secret
-func (tp *TreePanel) deleteSecret() {
+func (tp *SecretsTree) deleteSecret() {
 	node := tp.tree.GetCurrentNode()
 	if node == nil {
 		return
@@ -556,7 +556,7 @@ func (tp *TreePanel) deleteSecret() {
 }
 
 // Refresh refreshes the tree
-func (tp *TreePanel) Refresh() {
+func (tp *SecretsTree) Refresh() {
 	tp.logger.Info("Refreshing tree")
 
 	// Reload the tree
@@ -572,27 +572,27 @@ func (tp *TreePanel) Refresh() {
 }
 
 // SetSelectionHandler sets the selection handler
-func (tp *TreePanel) SetSelectionHandler(handler func(*vault.SecretNode, string)) {
+func (tp *SecretsTree) SetSelectionHandler(handler func(*vault.SecretNode, string)) {
 	tp.selectionHandler = handler
 }
 
 // SetRefreshHandler sets the refresh handler
-func (tp *TreePanel) SetRefreshHandler(handler func()) {
+func (tp *SecretsTree) SetRefreshHandler(handler func()) {
 	tp.refreshHandler = handler
 }
 
 // SetModalHandler sets the modal handler
-func (tp *TreePanel) SetModalHandler(handler func(tview.Primitive, bool)) {
+func (tp *SecretsTree) SetModalHandler(handler func(tview.Primitive, bool)) {
 	tp.modalHandler = handler
 }
 
 // SetValuePanel sets the value panel reference for actions
-func (tp *TreePanel) SetValuePanel(valuePanel *ValuePanel) {
+func (tp *SecretsTree) SetValuePanel(valuePanel *SecretsValue) {
 	tp.valuePanel = valuePanel
 }
 
 // toggleValueMasking toggles the masking of values in the value panel
-func (tp *TreePanel) toggleValueMasking() {
+func (tp *SecretsTree) toggleValueMasking() {
 	if tp.valuePanel != nil {
 		tp.valuePanel.ToggleMasking()
 		tp.logger.Info("Toggled value masking")
@@ -600,7 +600,7 @@ func (tp *TreePanel) toggleValueMasking() {
 }
 
 // copySecretValue copies the secret value to clipboard
-func (tp *TreePanel) copySecretValue() {
+func (tp *SecretsTree) copySecretValue() {
 	node := tp.tree.GetCurrentNode()
 	if node == nil {
 		tp.logger.Warn("No node selected")
@@ -634,7 +634,7 @@ func (tp *TreePanel) copySecretValue() {
 }
 
 // copyKeyValue copies a specific key's value from a secret
-func (tp *TreePanel) copyKeyValue(secret *vault.SecretNode, key string) {
+func (tp *SecretsTree) copyKeyValue(secret *vault.SecretNode, key string) {
 	if err := tp.clipboardHandler.CopyKeyValue(secret, key); err != nil {
 		tp.logger.Errorf("Failed to copy key value: %v", err)
 		return
@@ -643,7 +643,7 @@ func (tp *TreePanel) copyKeyValue(secret *vault.SecretNode, key string) {
 }
 
 // copySecretValues copies all values from a secret (or single value if only one key)
-func (tp *TreePanel) copySecretValues(secret *vault.SecretNode) {
+func (tp *SecretsTree) copySecretValues(secret *vault.SecretNode) {
 	if err := tp.clipboardHandler.CopySecretValues(secret); err != nil {
 		tp.logger.Errorf("Failed to copy secret values: %v", err)
 		return
@@ -652,13 +652,13 @@ func (tp *TreePanel) copySecretValues(secret *vault.SecretNode) {
 }
 
 // showModal shows or hides a modal
-func (tp *TreePanel) showModal(primitive tview.Primitive, show bool) {
+func (tp *SecretsTree) showModal(primitive tview.Primitive, show bool) {
 	if tp.modalHandler != nil {
 		tp.modalHandler(primitive, show)
 	}
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (tp *TreePanel) GetPrimitive() tview.Primitive {
+func (tp *SecretsTree) GetPrimitive() tview.Primitive {
 	return tp.tree
 }

@@ -9,34 +9,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewStatusBar(t *testing.T) {
+func TestNewSecretsStatus(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	statusBar := NewStatusBar(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
 
 	assert.NotNil(t, statusBar)
 }
 
-func TestStatusBar_Initialize(t *testing.T) {
+func TestSecretsStatus_Initialize(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	statusBar := NewStatusBar(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
 	err := statusBar.Initialize()
 
 	assert.NoError(t, err)
 	assert.NotNil(t, statusBar.GetPrimitive())
 }
 
-func TestStatusBar_UpdateSelection(t *testing.T) {
+func TestSecretsStatus_UpdateSelection(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	statusBar := NewStatusBar(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
 	statusBar.Initialize()
 
 	tests := []struct {

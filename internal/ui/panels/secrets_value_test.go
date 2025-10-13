@@ -10,35 +10,35 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewValuePanel(t *testing.T) {
+func TestNewSecretsValue(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 
 	assert.NotNil(t, panel)
 	assert.True(t, panel.isMasked) // Should start masked
 }
 
-func TestValuePanel_Initialize(t *testing.T) {
+func TestSecretsValue_Initialize(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	err := panel.Initialize()
 
 	assert.NoError(t, err)
 	assert.NotNil(t, panel.GetPrimitive())
 }
 
-func TestValuePanel_ShowSecret(t *testing.T) {
+func TestSecretsValue_ShowSecret(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{
@@ -58,12 +58,12 @@ func TestValuePanel_ShowSecret(t *testing.T) {
 	assert.True(t, panel.isMasked) // Should reset to masked
 }
 
-func TestValuePanel_ShowKey(t *testing.T) {
+func TestSecretsValue_ShowKey(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{
@@ -82,12 +82,12 @@ func TestValuePanel_ShowKey(t *testing.T) {
 	assert.True(t, panel.isMasked) // Should reset to masked
 }
 
-func TestValuePanel_ToggleMasking(t *testing.T) {
+func TestSecretsValue_ToggleMasking(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	secret := &vault.SecretNode{
@@ -113,12 +113,12 @@ func TestValuePanel_ToggleMasking(t *testing.T) {
 	assert.True(t, panel.isMasked)
 }
 
-func TestValuePanel_ShowDirectory(t *testing.T) {
+func TestSecretsValue_ShowDirectory(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	panel.Initialize()
 
 	panel.ShowDirectory("secrets/test")
@@ -127,12 +127,12 @@ func TestValuePanel_ShowDirectory(t *testing.T) {
 	assert.Equal(t, "", panel.currentKey)
 }
 
-func TestValuePanel_FormatValue(t *testing.T) {
+func TestSecretsValue_FormatValue(t *testing.T) {
 	cfg := &config.Config{}
 	logger := logrus.New()
 	vaultMgr, _ := vault.NewManager(cfg, logger)
 
-	panel := NewValuePanel(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(cfg, vaultMgr, logger)
 
 	tests := []struct {
 		name     string

@@ -13,8 +13,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// VaultProfilesPanel displays vault profiles with connection status
-type VaultProfilesPanel struct {
+// ProfilesTable displays vault profiles with connection status
+type ProfilesTable struct {
 	config          *config.Config
 	vaultMgr        *vault.Manager
 	table           *tview.Table
@@ -27,9 +27,9 @@ type VaultProfilesPanel struct {
 	vaultNames      []string // Sorted list of vault names for selection tracking
 }
 
-// NewVaultProfilesPanel creates a new vault profiles panel
-func NewVaultProfilesPanel(config *config.Config, vaultMgr *vault.Manager, app *tview.Application, logger *logrus.Logger) *VaultProfilesPanel {
-	return &VaultProfilesPanel{
+// NewProfilesTable creates a new vault profiles panel
+func NewProfilesTable(config *config.Config, vaultMgr *vault.Manager, app *tview.Application, logger *logrus.Logger) *ProfilesTable {
+	return &ProfilesTable{
 		config:      config,
 		vaultMgr:    vaultMgr,
 		app:         app,
@@ -39,17 +39,17 @@ func NewVaultProfilesPanel(config *config.Config, vaultMgr *vault.Manager, app *
 }
 
 // SetSuccessCallback sets the callback to be called when a vault is successfully connected
-func (vpp *VaultProfilesPanel) SetSuccessCallback(callback func()) {
+func (vpp *ProfilesTable) SetSuccessCallback(callback func()) {
 	vpp.successCallback = callback
 }
 
 // SetErrorCallback sets the callback to be called when an error occurs
-func (vpp *VaultProfilesPanel) SetErrorCallback(callback func(string)) {
+func (vpp *ProfilesTable) SetErrorCallback(callback func(string)) {
 	vpp.errorCallback = callback
 }
 
 // Initialize initializes the vault profiles panel
-func (vpp *VaultProfilesPanel) Initialize() error {
+func (vpp *ProfilesTable) Initialize() error {
 	vpp.table = tview.NewTable()
 
 	// Set up the table appearance
@@ -74,7 +74,7 @@ func (vpp *VaultProfilesPanel) Initialize() error {
 }
 
 // StopRefresher stops the background refresher
-func (vpp *VaultProfilesPanel) StopRefresher() {
+func (vpp *ProfilesTable) StopRefresher() {
 	vpp.stopOnce.Do(func() {
 		if vpp.stopRefresh != nil {
 			close(vpp.stopRefresh)
@@ -83,7 +83,7 @@ func (vpp *VaultProfilesPanel) StopRefresher() {
 }
 
 // startRefresher starts a background goroutine to refresh the profiles list
-func (vpp *VaultProfilesPanel) startRefresher() {
+func (vpp *ProfilesTable) startRefresher() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -106,7 +106,7 @@ func (vpp *VaultProfilesPanel) startRefresher() {
 }
 
 // hasConnectingProfiles checks if there are any profiles that are in the process of connecting
-func (vpp *VaultProfilesPanel) hasConnectingProfiles() bool {
+func (vpp *ProfilesTable) hasConnectingProfiles() bool {
 	vaults := vpp.vaultMgr.ListVaults()
 	for _, vaultName := range vaults {
 		status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
@@ -121,7 +121,7 @@ func (vpp *VaultProfilesPanel) hasConnectingProfiles() bool {
 }
 
 // setupKeyboardNavigation sets up keyboard navigation
-func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
+func (vpp *ProfilesTable) setupKeyboardNavigation() {
 	vpp.table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEnter:
@@ -158,7 +158,7 @@ func (vpp *VaultProfilesPanel) setupKeyboardNavigation() {
 }
 
 // loadProfiles loads and displays vault profiles
-func (vpp *VaultProfilesPanel) loadProfiles() error {
+func (vpp *ProfilesTable) loadProfiles() error {
 	// Store the current selection (row number, accounting for header)
 	currentRow, _ := vpp.table.GetSelection()
 
@@ -252,7 +252,7 @@ func (vpp *VaultProfilesPanel) loadProfiles() error {
 }
 
 // formatStatus formats the status text and color
-func (vpp *VaultProfilesPanel) formatStatus(status *vault.ConnectionStatus) (string, tcell.Color) {
+func (vpp *ProfilesTable) formatStatus(status *vault.ConnectionStatus) (string, tcell.Color) {
 	if status.Connecting {
 		return "⏳ Connecting", tcell.ColorYellow
 	} else if status.Connected {
@@ -267,7 +267,7 @@ func (vpp *VaultProfilesPanel) formatStatus(status *vault.ConnectionStatus) (str
 }
 
 // switchToSelectedVault switches to the currently selected vault
-func (vpp *VaultProfilesPanel) switchToSelectedVault() {
+func (vpp *ProfilesTable) switchToSelectedVault() {
 	row, _ := vpp.table.GetSelection()
 	// Row 0 is header, data starts at row 1
 	if row < 1 || row > len(vpp.vaultNames) {
@@ -281,7 +281,7 @@ func (vpp *VaultProfilesPanel) switchToSelectedVault() {
 }
 
 // switchToVault switches to a specific vault
-func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
+func (vpp *ProfilesTable) switchToVault(vaultName string) {
 	if err := vpp.vaultMgr.SwitchVault(vaultName); err != nil {
 		vpp.logger.Errorf("Failed to switch to vault '%s': %v", vaultName, err)
 		// Show error dialog if callback is set
@@ -331,14 +331,14 @@ func (vpp *VaultProfilesPanel) switchToVault(vaultName string) {
 }
 
 // addNewVault adds a new vault profile
-func (vpp *VaultProfilesPanel) addNewVault() {
+func (vpp *ProfilesTable) addNewVault() {
 	// This would show a form to add a new vault
 	// For now, just log the action
 	vpp.logger.Info("Add new vault (not implemented yet)")
 }
 
 // deleteSelectedVault deletes the selected vault profile
-func (vpp *VaultProfilesPanel) deleteSelectedVault() {
+func (vpp *ProfilesTable) deleteSelectedVault() {
 	row, _ := vpp.table.GetSelection()
 	// Row 0 is header, data starts at row 1
 	if row < 1 || row > len(vpp.vaultNames) {
@@ -351,7 +351,7 @@ func (vpp *VaultProfilesPanel) deleteSelectedVault() {
 }
 
 // Refresh refreshes the profiles display
-func (vpp *VaultProfilesPanel) Refresh() {
+func (vpp *ProfilesTable) Refresh() {
 	// Reload profiles
 	if err := vpp.loadProfiles(); err != nil {
 		vpp.logger.Errorf("Failed to refresh profiles: %v", err)
@@ -359,7 +359,7 @@ func (vpp *VaultProfilesPanel) Refresh() {
 }
 
 // refreshProfiles reloads the configuration and refreshes all connections
-func (vpp *VaultProfilesPanel) refreshProfiles() {
+func (vpp *ProfilesTable) refreshProfiles() {
 	vpp.logger.Info("Reloading configuration and refreshing connections...")
 
 	// Run the reload in a goroutine to avoid blocking the UI thread
@@ -392,7 +392,7 @@ func (vpp *VaultProfilesPanel) refreshProfiles() {
 }
 
 // ensureRefresherRunning ensures the background refresher is running
-func (vpp *VaultProfilesPanel) ensureRefresherRunning() {
+func (vpp *ProfilesTable) ensureRefresherRunning() {
 	// Try to stop existing refresher
 	vpp.stopOnce.Do(func() {
 		if vpp.stopRefresh != nil {
@@ -409,6 +409,6 @@ func (vpp *VaultProfilesPanel) ensureRefresherRunning() {
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (vpp *VaultProfilesPanel) GetPrimitive() tview.Primitive {
+func (vpp *ProfilesTable) GetPrimitive() tview.Primitive {
 	return vpp.table
 }

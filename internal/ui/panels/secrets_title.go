@@ -9,25 +9,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// HelpPanel represents the navigation help panel
-type HelpPanel struct {
+// SecretsTitle represents the navigation secrets title
+type SecretsTitle struct {
 	config   *config.Config
 	vaultMgr *vault.Manager
 	textView *tview.TextView
 	logger   *logrus.Logger
 }
 
-// NewHelpPanel creates a new help panel
-func NewHelpPanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *HelpPanel {
-	return &HelpPanel{
+// NewSecretsTitle creates a new secrets title
+func NewSecretsTitle(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsTitle {
+	return &SecretsTitle{
 		config:   config,
 		vaultMgr: vaultMgr,
 		logger:   logger,
 	}
 }
 
-// Initialize initializes the help panel
-func (hp *HelpPanel) Initialize() error {
+// Initialize initializes the secrets title
+func (hp *SecretsTitle) Initialize() error {
 	hp.textView = tview.NewTextView()
 
 	// Set up the text view appearance
@@ -45,7 +45,7 @@ func (hp *HelpPanel) Initialize() error {
 }
 
 // updateHelpText updates the help text
-func (hp *HelpPanel) updateHelpText() {
+func (hp *SecretsTitle) updateHelpText() {
 	// Get current vault connection info
 	vaultInfo := hp.getVaultInfo()
 
@@ -62,7 +62,7 @@ func (hp *HelpPanel) updateHelpText() {
 }
 
 // getVaultInfo returns the current vault connection information
-func (hp *HelpPanel) getVaultInfo() string {
+func (hp *SecretsTitle) getVaultInfo() string {
 	if hp.vaultMgr == nil {
 		return "[red]No connection[white]"
 	}
@@ -81,11 +81,11 @@ func (hp *HelpPanel) getVaultInfo() string {
 }
 
 // UpdateVaultInfo updates the vault connection information
-func (hp *HelpPanel) UpdateVaultInfo() {
+func (hp *SecretsTitle) UpdateVaultInfo() {
 	hp.updateHelpText()
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (hp *HelpPanel) GetPrimitive() tview.Primitive {
+func (hp *SecretsTitle) GetPrimitive() tview.Primitive {
 	return hp.textView
 }

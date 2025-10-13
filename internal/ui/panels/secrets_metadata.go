@@ -9,8 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// MetadataPanel represents the secret metadata panel
-type MetadataPanel struct {
+// SecretsMetadata represents the secret metadata panel
+type SecretsMetadata struct {
 	config        *config.Config
 	vaultMgr      *vault.Manager
 	textView      *tview.TextView
@@ -18,9 +18,9 @@ type MetadataPanel struct {
 	logger        *logrus.Logger
 }
 
-// NewMetadataPanel creates a new metadata panel
-func NewMetadataPanel(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *MetadataPanel {
-	return &MetadataPanel{
+// NewSecretsMetadata creates a new metadata panel
+func NewSecretsMetadata(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsMetadata {
+	return &SecretsMetadata{
 		config:   config,
 		vaultMgr: vaultMgr,
 		logger:   logger,
@@ -28,7 +28,7 @@ func NewMetadataPanel(config *config.Config, vaultMgr *vault.Manager, logger *lo
 }
 
 // Initialize initializes the metadata panel
-func (mp *MetadataPanel) Initialize() error {
+func (mp *SecretsMetadata) Initialize() error {
 	mp.textView = tview.NewTextView()
 
 	// Set up the text view appearance
@@ -47,13 +47,13 @@ func (mp *MetadataPanel) Initialize() error {
 }
 
 // ShowSecret displays secret metadata
-func (mp *MetadataPanel) ShowSecret(secret *vault.SecretNode) {
+func (mp *SecretsMetadata) ShowSecret(secret *vault.SecretNode) {
 	mp.currentSecret = secret
 	mp.displayMetadata(secret)
 }
 
 // ShowDirectory displays directory information
-func (mp *MetadataPanel) ShowDirectory(path string, itemCount int) {
+func (mp *SecretsMetadata) ShowDirectory(path string, itemCount int) {
 	mp.currentSecret = nil
 	content := fmt.Sprintf(`[yellow]Type:[white] Directory
 [yellow]Path:[white] %s
@@ -64,7 +64,7 @@ func (mp *MetadataPanel) ShowDirectory(path string, itemCount int) {
 }
 
 // displayMetadata displays secret metadata
-func (mp *MetadataPanel) displayMetadata(secret *vault.SecretNode) {
+func (mp *SecretsMetadata) displayMetadata(secret *vault.SecretNode) {
 	content := fmt.Sprintf(`[yellow]Type:[white] Secret
 [yellow]Name:[white] %s
 [yellow]Path:[white] %s`, secret.Name, secret.Path)
@@ -94,7 +94,7 @@ func (mp *MetadataPanel) displayMetadata(secret *vault.SecretNode) {
 }
 
 // ShowKey displays metadata for a specific key within a secret
-func (mp *MetadataPanel) ShowKey(secret *vault.SecretNode, key string) {
+func (mp *SecretsMetadata) ShowKey(secret *vault.SecretNode, key string) {
 	mp.currentSecret = secret
 	content := fmt.Sprintf(`[yellow]Type:[white] Secret Key
 [yellow]Secret:[white] %s
@@ -106,7 +106,7 @@ func (mp *MetadataPanel) ShowKey(secret *vault.SecretNode, key string) {
 }
 
 // showDefaultMessage shows the default message
-func (mp *MetadataPanel) showDefaultMessage() {
+func (mp *SecretsMetadata) showDefaultMessage() {
 	content := `[yellow]Item Metadata[white]
 
 Select a secret or directory from the tree to view its metadata.
@@ -122,7 +122,7 @@ Select a secret or directory from the tree to view its metadata.
 }
 
 // Refresh refreshes the metadata panel
-func (mp *MetadataPanel) Refresh() {
+func (mp *SecretsMetadata) Refresh() {
 	if mp.currentSecret != nil {
 		mp.displayMetadata(mp.currentSecret)
 	} else {
@@ -131,6 +131,6 @@ func (mp *MetadataPanel) Refresh() {
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (mp *MetadataPanel) GetPrimitive() tview.Primitive {
+func (mp *SecretsMetadata) GetPrimitive() tview.Primitive {
 	return mp.textView
 }

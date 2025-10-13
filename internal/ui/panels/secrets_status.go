@@ -10,17 +10,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// StatusBar represents the status bar
-type StatusBar struct {
+// SecretsStatus represents the status bar
+type SecretsStatus struct {
 	config   *config.Config
 	vaultMgr *vault.Manager
 	textView *tview.TextView
 	logger   *logrus.Logger
 }
 
-// NewStatusBar creates a new status bar
-func NewStatusBar(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *StatusBar {
-	return &StatusBar{
+// NewSecretsStatus creates a new status bar
+func NewSecretsStatus(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsStatus {
+	return &SecretsStatus{
 		config:   config,
 		vaultMgr: vaultMgr,
 		logger:   logger,
@@ -28,7 +28,7 @@ func NewStatusBar(config *config.Config, vaultMgr *vault.Manager, logger *logrus
 }
 
 // Initialize initializes the status bar
-func (sb *StatusBar) Initialize() error {
+func (sb *SecretsStatus) Initialize() error {
 	sb.textView = tview.NewTextView()
 
 	// Set up the text view appearance
@@ -44,7 +44,7 @@ func (sb *StatusBar) Initialize() error {
 }
 
 // UpdateConnectionStatus updates the connection status
-func (sb *StatusBar) UpdateConnectionStatus() {
+func (sb *SecretsStatus) UpdateConnectionStatus() {
 	// Get active vault
 	activeVault := sb.vaultMgr.GetActiveVault()
 
@@ -84,7 +84,7 @@ func (sb *StatusBar) UpdateConnectionStatus() {
 }
 
 // UpdateSelection updates the selection status
-func (sb *StatusBar) UpdateSelection(path string, isSecret bool) {
+func (sb *SecretsStatus) UpdateSelection(path string, isSecret bool) {
 	var itemType string
 	if isSecret {
 		itemType = "Secret"
@@ -97,11 +97,11 @@ func (sb *StatusBar) UpdateSelection(path string, isSecret bool) {
 }
 
 // updateStatus updates the status text
-func (sb *StatusBar) updateStatus(text string) {
+func (sb *SecretsStatus) updateStatus(text string) {
 	sb.textView.SetText(text)
 }
 
 // GetPrimitive returns the underlying tview primitive
-func (sb *StatusBar) GetPrimitive() tview.Primitive {
+func (sb *SecretsStatus) GetPrimitive() tview.Primitive {
 	return sb.textView
 }
