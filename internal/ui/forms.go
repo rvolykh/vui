@@ -428,8 +428,8 @@ func (fm *FormsManager) EditSecretForm(secretPath string, callback func()) tview
 // DeleteSecretForm creates a confirmation form for deleting a secret
 func (fm *FormsManager) DeleteSecretForm(secretPath string, callback func()) tview.Primitive {
 	modal := tview.NewModal().
-		SetText(fmt.Sprintf("Are you sure you want to delete the secret:\n\n%s\n\nThis action cannot be undone.", secretPath)).
-		AddButtons([]string{"Delete", "Cancel"}).
+		SetText(fmt.Sprintf("Are you sure you want to delete the secret:\n\n[::b]%s[::-]\n\nThis action cannot be undone.", secretPath)).
+		AddButtons([]string{"Cancel", "Delete"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Delete" {
 				fm.handleDeleteSecret(secretPath, callback)
@@ -441,7 +441,16 @@ func (fm *FormsManager) DeleteSecretForm(secretPath string, callback func()) tvi
 		}).
 		SetButtonBackgroundColor(tcell.ColorDarkGray).
 		SetButtonTextColor(tcell.ColorWhite).
-		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorRed).Foreground(tcell.ColorWhite))
+		SetButtonActivatedStyle(
+			tcell.StyleDefault.
+				Background(tcell.ColorRed).
+				Foreground(tcell.ColorWhite).
+				Bold(true).
+				// Set a border style by using more visible attributes.
+				// Note: tcell/tview buttons themselves do not support box borders,
+				// so we use Bold and Reverse to simulate a "bordered" effect.
+				Reverse(true),
+		)
 
 	return modal
 }
