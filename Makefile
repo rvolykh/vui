@@ -43,6 +43,7 @@ clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 	rm -f $(BINARY_NAME)-*
+	rm coverage.out coverage.html
 
 # Run tests
 test:
