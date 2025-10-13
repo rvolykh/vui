@@ -25,6 +25,20 @@ type App struct {
 
 // NewApp creates a new UI application
 func NewApp(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *App {
+	// Customize tview theme colors before creating UI elements
+	// Replace the default purple/magenta theme with a more neutral dark theme
+	tview.Styles.PrimitiveBackgroundColor = tcell.ColorBlack        // Main background
+	tview.Styles.ContrastBackgroundColor = tcell.ColorDarkSlateGray // Input fields, buttons (was purple)
+	tview.Styles.MoreContrastBackgroundColor = tcell.ColorDarkGray  // Even more contrast
+	tview.Styles.BorderColor = tcell.ColorDarkCyan                  // Border color
+	tview.Styles.TitleColor = tcell.ColorWhite                      // Title text
+	tview.Styles.GraphicsColor = tcell.ColorDarkCyan                // Graphics elements
+	tview.Styles.PrimaryTextColor = tcell.ColorWhite                // Primary text
+	tview.Styles.SecondaryTextColor = tcell.ColorLightGray          // Secondary text
+	tview.Styles.TertiaryTextColor = tcell.ColorGray                // Tertiary text
+	tview.Styles.InverseTextColor = tcell.ColorBlack                // Inverse text
+	tview.Styles.ContrastSecondaryTextColor = tcell.ColorDarkGray   // Contrast secondary text
+
 	uiApp := tview.NewApplication()
 
 	// Create the main layout
@@ -194,7 +208,10 @@ Press any key to close this help.`
 				a.uiApp.SetRoot(a.layout.GetRoot(), true)
 				a.currentRoot = a.layout.GetRoot()
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	a.uiApp.SetRoot(modal, false)
 }
@@ -306,7 +323,10 @@ func (a *App) showError(message string) {
 				a.currentRoot = a.layout.GetRoot()
 				a.uiApp.SetRoot(a.currentRoot, true)
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	a.uiApp.SetRoot(modal, false)
 }
@@ -323,7 +343,10 @@ func (a *App) showAuthError(message string) {
 			} else {
 				a.showVaultProfiles()
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	a.uiApp.SetRoot(modal, false)
 }

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/vault"
@@ -194,6 +195,17 @@ func (fm *FormsManager) CreateSecretForm(basePath string, callback func()) tview
 				return ""
 			}())).
 			SetTitleAlign(tview.AlignLeft)
+
+		// Set form field colors for a clean, neutral look
+		form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
+			SetFieldTextColor(tcell.ColorWhite).
+			SetLabelColor(tcell.ColorLightGray)
+
+		// Set button colors - inactive buttons have dark gray background with white text
+		// active/focused buttons have cyan background with black text for clear visual distinction
+		form.SetButtonBackgroundColor(tcell.ColorDarkGray).
+			SetButtonTextColor(tcell.ColorWhite).
+			SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 		// Replace the form in the container
 		container.Clear()
@@ -392,6 +404,16 @@ func (fm *FormsManager) EditSecretForm(secretPath string, callback func()) tview
 			}())).
 			SetTitleAlign(tview.AlignLeft)
 
+		// Set form field colors for a clean, neutral look
+		form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
+			SetFieldTextColor(tcell.ColorWhite).
+			SetLabelColor(tcell.ColorLightGray)
+
+		// Set button colors for better visibility
+		form.SetButtonBackgroundColor(tcell.ColorDarkGray).
+			SetButtonTextColor(tcell.ColorWhite).
+			SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
+
 		// Replace the form in the container
 		container.Clear()
 		container.AddItem(form, 0, 1, true)
@@ -416,7 +438,10 @@ func (fm *FormsManager) DeleteSecretForm(secretPath string, callback func()) tvi
 					callback()
 				}
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorRed).Foreground(tcell.ColorWhite))
 
 	return modal
 }
@@ -442,6 +467,16 @@ func (fm *FormsManager) SearchForm(callback func()) tview.Primitive {
 	form.SetBorder(true).
 		SetTitle("Search Secrets").
 		SetTitleAlign(tview.AlignLeft)
+
+	// Set form field colors
+	form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
+		SetFieldTextColor(tcell.ColorWhite).
+		SetLabelColor(tcell.ColorLightGray)
+
+	// Set button colors for better visibility
+	form.SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	return form
 }
@@ -487,6 +522,16 @@ func (fm *FormsManager) AdvancedSearchForm(callback func()) tview.Primitive {
 	form.SetBorder(true).
 		SetTitle("Advanced Search").
 		SetTitleAlign(tview.AlignLeft)
+
+	// Set form field colors
+	form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
+		SetFieldTextColor(tcell.ColorWhite).
+		SetLabelColor(tcell.ColorLightGray)
+
+	// Set button colors for better visibility
+	form.SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	return form
 }
@@ -637,7 +682,10 @@ func (fm *FormsManager) showAdvancedSearch(callback func()) {
 			if callback != nil {
 				callback()
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	// Replace the modal content with the advanced search form
 	modal.SetText("").SetBorder(false)
@@ -748,7 +796,10 @@ func (fm *FormsManager) showSearchResults(results []*vault.SearchResult, callbac
 				if callback != nil {
 					callback()
 				}
-			})
+			}).
+			SetButtonBackgroundColor(tcell.ColorDarkGray).
+			SetButtonTextColor(tcell.ColorWhite).
+			SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 		fm.showModal(modal, false)
 		return
 	}
@@ -795,7 +846,10 @@ func (fm *FormsManager) createErrorForm(message string, callback func()) tview.P
 			if callback != nil {
 				callback()
 			}
-		})
+		}).
+		SetButtonBackgroundColor(tcell.ColorDarkGray).
+		SetButtonTextColor(tcell.ColorWhite).
+		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
 
 	return modal
 }
