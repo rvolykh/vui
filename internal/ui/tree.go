@@ -106,10 +106,6 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 				// Copy value only
 				tp.copySecretValue()
 				return nil
-			case 's':
-				// Search secrets
-				tp.searchSecrets()
-				return nil
 			}
 		}
 
@@ -554,18 +550,6 @@ func (tp *TreePanel) deleteSecret() {
 
 	tp.showModal(form, true)
 	tp.logger.Infof("Delete secret: %s", secret.Path)
-}
-
-// searchSecrets searches for secrets
-func (tp *TreePanel) searchSecrets() {
-	// Show search dialog as modal
-	form := tp.formsMgr.SearchForm(func() {
-		// Return to main UI
-		tp.showModal(nil, false)
-	})
-
-	tp.showModal(form, true)
-	tp.logger.Info("Search secrets")
 }
 
 // Refresh refreshes the tree

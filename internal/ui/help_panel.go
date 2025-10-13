@@ -56,7 +56,7 @@ func (hp *HelpPanel) updateHelpText() {
   ↑/↓: Move             c: Create new            d: Toggle mask/unmask   h/F1: Help
   ←/→: Collapse/Expand  e: Edit selected         v: Copy to clipboard    r/F5: Refresh
   Enter: Select/Expand  Ctrl+d: Delete selected                          Tab/Ctrl+v: Profiles
-                        s: Search                                        q/Ctrl+C: Quit`, vaultInfo)
+                                                                         q/Ctrl+C: Quit`, vaultInfo)
 
 	hp.textView.SetText(helpText)
 }

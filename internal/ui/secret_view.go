@@ -238,7 +238,6 @@ This is the secret details panel. Select a secret from the tree to view its cont
 • Press 'c' to create a new secret
 • Press 'e' to edit the selected secret
 • Press 'r' to refresh the view
-• Press 's' to search secrets
 
 [yellow]Vault Management:[white]
 • Press Ctrl+v to switch vaults

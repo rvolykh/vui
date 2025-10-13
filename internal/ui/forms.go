@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -35,13 +34,6 @@ func NewFormsManager(config *config.Config, vaultMgr *vault.Manager, logger *log
 // SetModalHandler sets the modal handler for showing modals
 func (fm *FormsManager) SetModalHandler(handler func(tview.Primitive, bool)) {
 	fm.modalHandler = handler
-}
-
-// showModal shows or hides a modal
-func (fm *FormsManager) showModal(primitive tview.Primitive, show bool) {
-	if fm.modalHandler != nil {
-		fm.modalHandler(primitive, show)
-	}
 }
 
 // CreateSecretForm creates a form for creating a new secret
@@ -179,7 +171,7 @@ func (fm *FormsManager) CreateSecretForm(basePath string, callback func()) tview
 				}
 
 				// Now create the secret with all pairs
-				fm.handleCreateSecretWithPairs(form, keyValuePairs, secretPath, callback)
+				fm.handleCreateSecretWithPairs(keyValuePairs, secretPath, callback)
 			}).
 			AddButton("Cancel", func() {
 				if callback != nil {
@@ -387,7 +379,7 @@ func (fm *FormsManager) EditSecretForm(secretPath string, callback func()) tview
 				}
 
 				// Now save the secret with all pairs
-				fm.handleEditSecretWithPairs(form, keyValuePairs, secretPath, callback)
+				fm.handleEditSecretWithPairs(keyValuePairs, secretPath, callback)
 			}).
 			AddButton("Cancel", func() {
 				if callback != nil {
@@ -455,98 +447,8 @@ func (fm *FormsManager) DeleteSecretForm(secretPath string, callback func()) tvi
 	return modal
 }
 
-// SearchForm creates a form for searching secrets
-func (fm *FormsManager) SearchForm(callback func()) tview.Primitive {
-	form := tview.NewForm()
-
-	form.AddInputField("Search Pattern", "", 30, nil, nil).
-		AddInputField("Search Path", "", 30, nil, nil).
-		AddButton("Search", func() {
-			fm.handleSearch(form, callback)
-		}).
-		AddButton("Advanced", func() {
-			fm.showAdvancedSearch(callback)
-		}).
-		AddButton("Cancel", func() {
-			if callback != nil {
-				callback()
-			}
-		})
-
-	form.SetBorder(true).
-		SetTitle("Search Secrets").
-		SetTitleAlign(tview.AlignLeft)
-
-	// Set form field colors
-	form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
-		SetFieldTextColor(tcell.ColorWhite).
-		SetLabelColor(tcell.ColorLightGray)
-
-	// Set button colors for better visibility
-	form.SetButtonBackgroundColor(tcell.ColorDarkGray).
-		SetButtonTextColor(tcell.ColorWhite).
-		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
-
-	return form
-}
-
-// AdvancedSearchForm creates an advanced search form
-func (fm *FormsManager) AdvancedSearchForm(callback func()) tview.Primitive {
-	form := tview.NewForm()
-
-	// Search pattern
-	form.AddInputField("Search Pattern", "", 30, nil, nil)
-
-	// Search path
-	form.AddInputField("Search Path", "", 30, nil, nil)
-
-	// Search type dropdown
-	searchTypes := []string{"Name", "Path", "Key", "Value", "Metadata", "All"}
-	form.AddDropDown("Search Type", searchTypes, 0, nil)
-
-	// Max depth
-	form.AddInputField("Max Depth", "10", 10, nil, nil)
-
-	// Case sensitive checkbox
-	form.AddCheckbox("Case Sensitive", false, nil)
-
-	// Regex checkbox
-	form.AddCheckbox("Use Regex", false, nil)
-
-	// Key filter
-	form.AddInputField("Key Filter (optional)", "", 30, nil, nil)
-
-	// Value filter
-	form.AddInputField("Value Filter (optional)", "", 30, nil, nil)
-
-	form.AddButton("Search", func() {
-		fm.handleAdvancedSearch(form, callback)
-	}).
-		AddButton("Cancel", func() {
-			if callback != nil {
-				callback()
-			}
-		})
-
-	form.SetBorder(true).
-		SetTitle("Advanced Search").
-		SetTitleAlign(tview.AlignLeft)
-
-	// Set form field colors
-	form.SetFieldBackgroundColor(tcell.ColorDarkSlateGray).
-		SetFieldTextColor(tcell.ColorWhite).
-		SetLabelColor(tcell.ColorLightGray)
-
-	// Set button colors for better visibility
-	form.SetButtonBackgroundColor(tcell.ColorDarkGray).
-		SetButtonTextColor(tcell.ColorWhite).
-		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
-
-	return form
-}
-
 // handleCreateSecretWithPairs handles the creation of a new secret with multiple key-value pairs
-func (fm *FormsManager) handleCreateSecretWithPairs(form *tview.Form, keyValuePairs map[string]string, path string, callback func()) {
+func (fm *FormsManager) handleCreateSecretWithPairs(keyValuePairs map[string]string, path string, callback func()) {
 	if path == "" {
 		fm.logger.Error("Secret path is required")
 		return
@@ -585,7 +487,7 @@ func (fm *FormsManager) handleCreateSecretWithPairs(form *tview.Form, keyValuePa
 }
 
 // handleEditSecretWithPairs handles the editing of an existing secret with multiple key-value pairs
-func (fm *FormsManager) handleEditSecretWithPairs(form *tview.Form, keyValuePairs map[string]string, secretPath string, callback func()) {
+func (fm *FormsManager) handleEditSecretWithPairs(keyValuePairs map[string]string, secretPath string, callback func()) {
 	if secretPath == "" {
 		fm.logger.Error("Secret path is required")
 		return
@@ -643,207 +545,6 @@ func (fm *FormsManager) handleDeleteSecret(secretPath string, callback func()) {
 	if callback != nil {
 		callback()
 	}
-}
-
-// handleSearch handles the search functionality
-func (fm *FormsManager) handleSearch(form *tview.Form, callback func()) {
-	patternField := form.GetFormItem(0).(*tview.InputField)
-	pathField := form.GetFormItem(1).(*tview.InputField)
-
-	pattern := strings.TrimSpace(patternField.GetText())
-	path := strings.TrimSpace(pathField.GetText())
-
-	if pattern == "" {
-		fm.logger.Error("Search pattern is required")
-		return
-	}
-
-	// Get secrets manager
-	secretsManager, err := fm.vaultMgr.GetSecretsManager()
-	if err != nil {
-		fm.logger.Errorf("Failed to get secrets manager: %v", err)
-		return
-	}
-
-	// Perform search
-	results, err := secretsManager.SearchSecrets(pattern, path)
-	if err != nil {
-		fm.logger.Errorf("Failed to search secrets: %v", err)
-		return
-	}
-
-	fm.logger.Infof("Search found %d results", len(results))
-
-	if callback != nil {
-		callback()
-	}
-}
-
-// showAdvancedSearch shows the advanced search form
-func (fm *FormsManager) showAdvancedSearch(callback func()) {
-	advancedForm := fm.AdvancedSearchForm(callback)
-
-	// Create a modal with the advanced search form
-	modal := tview.NewModal().
-		SetText("").
-		AddButtons([]string{"Close"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if callback != nil {
-				callback()
-			}
-		}).
-		SetButtonBackgroundColor(tcell.ColorDarkGray).
-		SetButtonTextColor(tcell.ColorWhite).
-		SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
-
-	// Replace the modal content with the advanced search form
-	modal.SetText("").SetBorder(false)
-
-	// Create a flex layout to contain the form
-	flex := tview.NewFlex().
-		SetDirection(tview.FlexRow).
-		AddItem(advancedForm, 0, 1, true)
-
-	// Show the advanced search form
-	fm.showModal(flex, true)
-}
-
-// handleAdvancedSearch handles the advanced search functionality
-func (fm *FormsManager) handleAdvancedSearch(form *tview.Form, callback func()) {
-	// Get form values
-	patternField := form.GetFormItem(0).(*tview.InputField)
-	pathField := form.GetFormItem(1).(*tview.InputField)
-	searchTypeDropdown := form.GetFormItem(2).(*tview.DropDown)
-	maxDepthField := form.GetFormItem(3).(*tview.InputField)
-	caseSensitiveCheckbox := form.GetFormItem(4).(*tview.Checkbox)
-	regexCheckbox := form.GetFormItem(5).(*tview.Checkbox)
-	keyFilterField := form.GetFormItem(6).(*tview.InputField)
-	valueFilterField := form.GetFormItem(7).(*tview.InputField)
-
-	pattern := strings.TrimSpace(patternField.GetText())
-	path := strings.TrimSpace(pathField.GetText())
-	maxDepthStr := strings.TrimSpace(maxDepthField.GetText())
-	keyFilter := strings.TrimSpace(keyFilterField.GetText())
-	valueFilter := strings.TrimSpace(valueFilterField.GetText())
-
-	if pattern == "" {
-		fm.logger.Error("Search pattern is required")
-		return
-	}
-
-	// Parse max depth
-	maxDepth := 10
-	if maxDepthStr != "" {
-		if d, err := strconv.Atoi(maxDepthStr); err == nil {
-			maxDepth = d
-		}
-	}
-
-	// Get search type
-	searchTypeIndex, _ := searchTypeDropdown.GetCurrentOption()
-	var searchTypeEnum vault.SearchType
-	switch searchTypeIndex {
-	case 0: // Name
-		searchTypeEnum = vault.SearchType(0) // SearchByName
-	case 1: // Path
-		searchTypeEnum = vault.SearchType(1) // SearchByPath
-	case 2: // Key
-		searchTypeEnum = vault.SearchType(2) // SearchByKey
-	case 3: // Value
-		searchTypeEnum = vault.SearchType(3) // SearchByValue
-	case 4: // Metadata
-		searchTypeEnum = vault.SearchType(4) // SearchByMetadata
-	case 5: // All
-		searchTypeEnum = vault.SearchType(5) // SearchAll
-	default:
-		searchTypeEnum = vault.SearchType(0) // SearchByName
-	}
-
-	// Get checkbox values
-	caseSensitive := caseSensitiveCheckbox.IsChecked()
-	useRegex := regexCheckbox.IsChecked()
-
-	// Get secrets manager
-	secretsManager, err := fm.vaultMgr.GetSecretsManager()
-	if err != nil {
-		fm.logger.Errorf("Failed to get secrets manager: %v", err)
-		return
-	}
-
-	// Create search options
-	options := &vault.AdvancedSearchOptions{
-		Pattern:       pattern,
-		RootPath:      path,
-		SearchType:    searchTypeEnum,
-		KeyFilter:     keyFilter,
-		ValueFilter:   valueFilter,
-		MaxDepth:      maxDepth,
-		CaseSensitive: caseSensitive,
-		Regex:         useRegex,
-	}
-
-	// Perform advanced search
-	results, err := secretsManager.AdvancedSearch(options)
-	if err != nil {
-		fm.logger.Errorf("Failed to perform advanced search: %v", err)
-		return
-	}
-
-	fm.logger.Infof("Advanced search found %d results", len(results))
-
-	// Show search results
-	fm.showSearchResults(results, callback)
-}
-
-// showSearchResults displays search results in a modal
-func (fm *FormsManager) showSearchResults(results []*vault.SearchResult, callback func()) {
-	if len(results) == 0 {
-		modal := tview.NewModal().
-			SetText("No search results found.").
-			AddButtons([]string{"OK"}).
-			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-				if callback != nil {
-					callback()
-				}
-			}).
-			SetButtonBackgroundColor(tcell.ColorDarkGray).
-			SetButtonTextColor(tcell.ColorWhite).
-			SetButtonActivatedStyle(tcell.StyleDefault.Background(tcell.ColorDarkCyan).Foreground(tcell.ColorBlack))
-		fm.showModal(modal, false)
-		return
-	}
-
-	// Create a list to display results
-	list := tview.NewList()
-
-	for i, result := range results {
-		// Limit display to first 50 results
-		if i >= 50 {
-			list.AddItem(fmt.Sprintf("... and %d more results", len(results)-50), "", 0, nil)
-			break
-		}
-
-		// Create display text
-		displayText := fmt.Sprintf("%s (Score: %.1f)", result.Node.Name, result.Score)
-		secondaryText := fmt.Sprintf("Path: %s | Match: %s", result.Path, result.MatchType)
-
-		// Add item to list
-		list.AddItem(displayText, secondaryText, 0, func() {
-			// Handle selection - could navigate to the secret
-			fm.logger.Infof("Selected search result: %s", result.Path)
-		})
-	}
-
-	list.SetTitle(fmt.Sprintf("Search Results (%d found)", len(results))).
-		SetBorder(true)
-
-	list.SetDoneFunc(func() {
-		if callback != nil {
-			callback()
-		}
-	})
-
-	fm.showModal(list, true)
 }
 
 // createErrorForm creates a simple error form

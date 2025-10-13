@@ -161,7 +161,6 @@ Select a secret from the tree to view its values.
 • View all key-value pairs
 • Expand secrets to view individual keys
 • Copy values to clipboard
-• Search within values
 
 [yellow]Navigation:[white]
 • Select a secret to view all its data

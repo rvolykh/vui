@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -127,6 +128,8 @@ func (sm *SecretsManager) GetSecret(path string) (*SecretNode, error) {
 
 	// Extract metadata if available
 	if metadata != nil && metadata.Data != nil {
+		sm.logger.Debugf("Raw metadata for %s: %+v", path, metadata.Data)
+
 		if createdTime, ok := metadata.Data["created_time"].(string); ok {
 			if t, err := time.Parse(time.RFC3339, createdTime); err == nil {
 				node.Metadata = &SecretMetadata{
@@ -134,11 +137,30 @@ func (sm *SecretsManager) GetSecret(path string) (*SecretNode, error) {
 				}
 			}
 		}
-		if version, ok := metadata.Data["current_version"].(float64); ok {
-			if node.Metadata == nil {
-				node.Metadata = &SecretMetadata{}
+
+		// Try to extract version - handle multiple numeric types
+		if node.Metadata == nil {
+			node.Metadata = &SecretMetadata{}
+		}
+
+		// Try different numeric types
+		switch v := metadata.Data["current_version"].(type) {
+		case float64:
+			node.Metadata.Version = int(v)
+			sm.logger.Debugf("Version extracted as float64: %d", node.Metadata.Version)
+		case int:
+			node.Metadata.Version = v
+			sm.logger.Debugf("Version extracted as int: %d", node.Metadata.Version)
+		case int64:
+			node.Metadata.Version = int(v)
+			sm.logger.Debugf("Version extracted as int64: %d", node.Metadata.Version)
+		case json.Number:
+			if ver, err := v.Int64(); err == nil {
+				node.Metadata.Version = int(ver)
+				sm.logger.Debugf("Version extracted as json.Number: %d", node.Metadata.Version)
 			}
-			node.Metadata.Version = int(version)
+		default:
+			sm.logger.Warnf("current_version field has unexpected type %T: %v", v, v)
 		}
 	}
 

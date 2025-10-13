@@ -159,39 +159,29 @@ func (a *App) setupKeyboardShortcuts() {
 func (a *App) showHelp() {
 	helpText := `VUI - Vault UI Help
 
-Navigation:
-  ↑/↓     Navigate tree items
-  ←/→     Collapse/expand tree nodes
-  Enter   Select item or enter directory
-  Esc     Go back or cancel
-  Tab     Navigate form fields (in forms) / Switch vault (in main view)
+[b]Navigation:[white]
+  ↑/↓      Navigate tree items                                          
+  ←/→      Collapse/expand tree nodes                                   
+  Enter    Select item or enter directory                               
+  Esc      Go back or cancel                                            
+  Tab      Navigate form fields (in forms) / Switch vault (in main view)
 
-Actions:
-  c       Create new secret
-  e       Edit selected secret
-  Ctrl+d  Delete selected secret
-  r       Refresh current view
-  s       Search secrets
-  h       Show this help
-  q       Quit application
+[b]Secret Panel:[white]
+  c        Create new secret             
+  e        Edit selected secret          
+  Ctrl+d   Delete selected secret        
+  d        Unmask/mask secret value      
+  v        Copy secret value to clipboard
 
-Secret Panel:
-  c       Copy entire secret to clipboard
-  v       Copy secret value to clipboard
-  e       Edit selected secret
+[b]Vault Management:[white]
+  Tab      Switch vault profiles (shows profiles table)         
+  Esc      Go back to secrets (if previously selected a profile)
 
-Vault Management:
-  Tab     Switch vault profiles (shows profiles table)
-  Ctrl+v  Switch vault profiles (shows profiles table)
-  Ctrl+n  Add new vault
-  Ctrl+r  Refresh vault connection
-
-Global:
-  F1      Show help
-  F5      Refresh
-  Ctrl+C  Exit application
-
-Press any key to close this help.`
+[b]Global:[white]
+  h / F1       Show help       
+  r / F5       Refresh         
+  q / Ctrl+C   Exit application
+`
 
 	// Remember the current screen to return to it after help is closed
 	previousRoot := a.currentRoot
@@ -414,8 +404,7 @@ func (a *App) buildWelcomeContent(width int) string {
 		{"↑/↓", "Navigate profiles"},
 		{"Enter", "Connect to profile"},
 		{"r/F5", "Refresh status"},
-		{"n", "Add new profile"},
-		{"F1", "Show help"},
+		{"h/F1", "Show help"},
 		{"q/Ctrl+C", "Exit"},
 	}
 
