@@ -84,6 +84,10 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 				tp.logger.Info("Collapsed directory")
 			}
 			return nil
+		case tcell.KeyCtrlD:
+			// Delete selected secret
+			tp.deleteSecret()
+			return nil
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case 'c':
@@ -95,12 +99,7 @@ func (tp *TreePanel) setupKeyboardNavigation() {
 				tp.editSecret()
 				return nil
 			case 'd':
-				// Check if Ctrl is pressed - delete secret
-				if event.Modifiers()&tcell.ModCtrl != 0 {
-					tp.deleteSecret()
-					return nil
-				}
-				// Otherwise toggle value masking
+				// Toggle value masking
 				tp.toggleValueMasking()
 				return nil
 			case 'v':
