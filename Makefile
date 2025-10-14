@@ -41,16 +41,17 @@ build-windows:
 # Clean build artifacts
 clean:
 	$(GOCLEAN)
-	rm -f $(BINARY_NAME)
-	rm -f $(BINARY_NAME)-*
-	rm coverage.out coverage.html
+	rm -f $(BINARY_NAME) $(BINARY_NAME)-*
+	rm -f *.log
+	rm -f coverage.*
+	rm -rf sandbox/vol
 
 # Run tests
 test:
 	$(GOTEST) -v ./...
 
 # Run tests with coverage
-test-coverage:
+coverage:
 	$(GOTEST) -v -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 
@@ -79,9 +80,17 @@ install: build
 run: build
 	./$(BINARY_NAME)
 
-# Development run with live reload (requires air)
-dev:
-	air
+up:
+	cd sandbox && docker-compose up -d
+
+logs:
+	cd sandbox && docker-compose logs -f
+
+ps:
+	cd sandbox && docker-compose ps
+
+down:
+	cd sandbox && docker-compose down
 
 # Create release packages
 release: clean build-all
@@ -99,13 +108,14 @@ help:
 	@echo "  build-all    - Build for all platforms"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  test         - Run tests"
-	@echo "  test-coverage- Run tests with coverage"
+	@echo "  coverage     - Run tests with coverage"
 	@echo "  deps         - Download and tidy dependencies"
 	@echo "  fmt          - Format code"
 	@echo "  vet          - Run go vet"
 	@echo "  lint         - Run golangci-lint"
 	@echo "  install      - Install the application"
 	@echo "  run          - Build and run the application"
-	@echo "  dev          - Run with live reload (requires air)"
+	@echo "  up           - Setup test environment"
+	@echo "  down         - Shutdown test environment"
 	@echo "  release      - Create release packages"
 	@echo "  help         - Show this help"

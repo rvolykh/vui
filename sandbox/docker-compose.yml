@@ -1,0 +1,62 @@
+services:
+  vault-token:
+    image: hashicorp/vault:1.20
+    ports:
+      - "127.0.0.1:8201:8200"
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vol/token/file:/vault/file
+  
+  vault-ldap:
+    image: hashicorp/vault:1.20
+    ports:
+      - "127.0.0.1:8202:8200"
+    environment:
+      - VAULT_ADDR=http://127.0.0.1:8200
+      - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./vol/ldap/file:/vault/file
+    healthcheck:
+      test: ["CMD-SHELL", "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=vui-sandbox-token vault status > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - ldap
+
+  vault-ldap-init:
+    image: hashicorp/vault:1.20
+    environment:
+      - VAULT_ADDR=http://vault-ldap:8200
+      - VAULT_TOKEN=vui-sandbox-token
+    restart: "on-failure"
+    volumes:
+      - ./files/vault_ldap_init.sh:/vault_ldap_init.sh
+      - ./vol/vault-ldap-init/status:/status
+    depends_on:
+      - vault-ldap
+    command: ["/vault_ldap_init.sh"]
+
+  ldap:
+    image: osixia/openldap:1.5.0
+    ports:
+      - "127.0.0.1:8389:389"
+    environment:
+      - LDAP_ORGANISATION="Vui Sandbox"
+      - LDAP_DOMAIN=sandbox.vui
+      - LDAP_ADMIN_PASSWORD=vui-sandbox-admin-password
+      - LDAP_TLS=false
+    command: ["--copy-service"]
+    volumes:
+      - ./files/ldap_bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/50-bootstrap.ldif
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost -b dc=sandbox,dc=vui -D cn=admin,dc=sandbox,dc=vui -w vui-sandbox-admin-password > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

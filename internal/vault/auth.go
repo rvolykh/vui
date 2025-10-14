@@ -86,8 +86,7 @@ func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.
 	}
 
 	// Authenticate with LDAP
-	secret, err := client.Logical().Write("auth/ldap/login", map[string]interface{}{
-		"username": username,
+	secret, err := client.Logical().Write("auth/ldap/login/" + username, map[string]interface{}{
 		"password": password,
 	})
 	if err != nil {

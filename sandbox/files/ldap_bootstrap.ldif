@@ -1,0 +1,31 @@
+# Organizational Units
+dn: ou=user,dc=sandbox,dc=vui
+objectClass: organizationalUnit
+ou: user
+
+dn: ou=groups,dc=sandbox,dc=vui
+objectClass: organizationalUnit
+ou: groups
+
+# Static User
+dn: uid=testuser,ou=user,dc=sandbox,dc=vui
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: Test User
+sn: User
+uid: testuser
+mail: testuser@sandbox.vui
+userPassword: testpassword
+
+# Static Group
+dn: cn=testgroup,ou=groups,dc=sandbox,dc=vui
+objectClass: top
+objectClass: groupOfNames
+cn: testgroup
+member: uid=testuser,ou=user,dc=sandbox,dc=vui
+
+
+
+

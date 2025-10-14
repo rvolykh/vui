@@ -18,19 +18,26 @@ vaults:
     token: "${VAULT_TOKEN_DEFAULT}"
     namespace: ""
 
+  vault-token:
+    address: "http://localhost:8201"
+    auth_method: "token"
+    token: "vui-sandbox-token"
+    namespace: ""
+
+  vault-ldap:
+    address: "http://localhost:8202"
+    auth_method: "ldap"
+    namespace: ""
+    auth_config:
+      username: "testuser"
+      password: "testpassword"
+
+
   production:
     address: "https://vault-prod.company.com"
     auth_method: "token"
     token: "${VAULT_TOKEN_PROD}"
     namespace: "production"
-
-  staging:
-    address: "https://vault-staging.company.com"
-    auth_method: "ldap"
-    namespace: "staging"
-    auth_config:
-      username: "${VAULT_USERNAME}"
-      password: "${VAULT_PASSWORD}"
 
   development:
     address: "http://localhost:8200"
