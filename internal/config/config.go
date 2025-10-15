@@ -110,6 +110,12 @@ func Load() (*Config, error) {
 		// Config file not found, use defaults and environment variables
 	}
 
+	// Expand environment variables in config
+	for _, k := range viper.AllKeys() {
+		v := viper.GetString(k)
+		viper.Set(k, os.ExpandEnv(v))
+	}
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)

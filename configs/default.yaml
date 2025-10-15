@@ -1,5 +1,4 @@
 app:
-  default_vault: "default"
   theme: "dark"
   refresh_interval: 30
   max_secret_size: 10240
@@ -12,35 +11,26 @@ ui:
   tree_width: 40
 
 vaults:
-  default:
+  vault-token:
     address: "http://localhost:8200"
     auth_method: "token"
-    token: "${VAULT_TOKEN_DEFAULT}"
-    namespace: ""
-
-  vault-token:
-    address: "http://localhost:8201"
-    auth_method: "token"
-    token: "vui-sandbox-token"
+    token: "${VAULT_TOKEN}"
     namespace: ""
 
   vault-ldap:
-    address: "http://localhost:8202"
+    address: "http://localhost:8200"
     auth_method: "ldap"
     namespace: ""
     auth_config:
-      username: "testuser"
-      password: "testpassword"
+      username: "${LDAP_USERNAME}"
+      password: "${LDAP_PASSWORD}"
 
-
-  production:
-    address: "https://vault-prod.company.com"
-    auth_method: "token"
-    token: "${VAULT_TOKEN_PROD}"
-    namespace: "production"
-
-  development:
+  vault-aws:
     address: "http://localhost:8200"
-    auth_method: "token"
-    token: "dev-token"
-    namespace: "dev"
+    auth_method: "aws"
+    namespace: ""
+    auth_config:
+      role: "vui-iam-role"
+      aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+      aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+      aws_session_token: "${AWS_SESSION_TOKEN}"

@@ -5,6 +5,9 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/sirupsen/logrus"
 )
@@ -113,9 +116,17 @@ func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.V
 		return fmt.Errorf("aws_secret_access_key is required for AWS authentication")
 	}
 
-	role, ok := profile.AuthConfig["aws_role"].(string)
+	sessionToken := profile.AuthConfig["aws_session_token"].(string)
+
+	am.logger.Warn("--------------------------------")
+	am.logger.Warn("accessKeyID", accessKeyID)
+	am.logger.Warn("secretAccessKey", secretAccessKey)
+	am.logger.Warn("sessionToken", sessionToken)
+	am.logger.Warn("--------------------------------")
+
+	role, ok := profile.AuthConfig["role"].(string)
 	if !ok || role == "" {
-		return fmt.Errorf("aws_role is required for AWS authentication")
+		return fmt.Errorf("role is required for AWS authentication")
 	}
 
 	region, _ := profile.AuthConfig["aws_region"].(string)
@@ -123,24 +134,29 @@ func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.V
 		region = "us-east-1"
 	}
 
-	sessionToken, _ := profile.AuthConfig["aws_session_token"].(string)
+	// // Authenticate with AWS
+	// authData := map[string]interface{}{
+	// 	"role":                    role,
+	// 	"iam_http_request_method": "POST",
+	// 	"iam_request_url":         "https://sts.amazonaws.com/",
+	// 	"iam_request_body":        "Action=GetCallerIdentity&Version=2011-06-15",
+	// 	"iam_request_headers": map[string]string{
+	// 		"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+	// 	},
+	// }
 
-	// Authenticate with AWS
-	authData := map[string]interface{}{
-		"role":                    role,
-		"iam_http_request_method": "POST",
-		"iam_request_url":         "https://sts.amazonaws.com/",
-		"iam_request_body":        "Action=GetCallerIdentity&Version=2011-06-15",
-		"iam_request_headers": map[string]string{
-			"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-		},
+	// if sessionToken != "" {
+	// 	authData["iam_request_headers"].(map[string]string)["X-Amz-Security-Token"] = sessionToken
+	// }
+
+	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
+
+	data, err := awsutil.GenerateLoginData(creds, "", region, hclog.Default())
+	if err != nil {
+		return fmt.Errorf("unable to generate login data for AWS auth endpoint: %w", err)
 	}
 
-	if sessionToken != "" {
-		authData["iam_request_headers"].(map[string]string)["X-Amz-Security-Token"] = sessionToken
-	}
-
-	secret, err := client.Logical().Write("auth/aws/login", authData)
+	secret, err := client.Logical().Write("auth/aws/login", data)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate with AWS: %w", err)
 	}

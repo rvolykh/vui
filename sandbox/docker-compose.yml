@@ -1,47 +1,15 @@
 services:
-  vault-token:
+  vault:
     image: hashicorp/vault:1.20
     ports:
-      - "127.0.0.1:8201:8200"
+      - "127.0.0.1:8200:8200"
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
     cap_add:
       - IPC_LOCK
     volumes:
-      - ./vol/token/file:/vault/file
-  
-  vault-ldap:
-    image: hashicorp/vault:1.20
-    ports:
-      - "127.0.0.1:8202:8200"
-    environment:
-      - VAULT_ADDR=http://127.0.0.1:8200
-      - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
-    cap_add:
-      - IPC_LOCK
-    volumes:
-      - ./vol/ldap/file:/vault/file
-    healthcheck:
-      test: ["CMD-SHELL", "VAULT_ADDR=http://127.0.0.1:8200 VAULT_TOKEN=vui-sandbox-token vault status > /dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    depends_on:
-      - ldap
-
-  vault-ldap-init:
-    image: hashicorp/vault:1.20
-    environment:
-      - VAULT_ADDR=http://vault-ldap:8200
-      - VAULT_TOKEN=vui-sandbox-token
-    restart: "on-failure"
-    volumes:
-      - ./files/vault_ldap_init.sh:/vault_ldap_init.sh
-      - ./vol/vault-ldap-init/status:/status
-    depends_on:
-      - vault-ldap
-    command: ["/vault_ldap_init.sh"]
+      - ./vol/vault/file:/vault/file
 
   ldap:
     image: osixia/openldap:1.5.0
@@ -55,8 +23,53 @@ services:
     command: ["--copy-service"]
     volumes:
       - ./files/ldap_bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/50-bootstrap.ldif
-    healthcheck:
-      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost -b dc=sandbox,dc=vui -D cn=admin,dc=sandbox,dc=vui -w vui-sandbox-admin-password > /dev/null"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"
+    environment:
+      - SERVICES=sts,iam
+    volumes:
+      - "./vol/localstack:/var/lib/localstack"
+
+  init_vault_ldap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_vault_ldap:/status/vault_ldap
+    depends_on:
+      - vault
+      - ldap
+    entrypoint: ["/vui/init_vault_ldap.sh"]
+    restart: "on-failure:10"
+
+  init_vault_aws:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_vault_aws:/status/vault_aws
+    depends_on:
+      - vault
+      - localstack
+    entrypoint: ["/vui/init_vault_aws.sh"]
+    restart: "on-failure:10"
+
+  init_localstack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_localstack:/status/localstack
+    depends_on:
+      - localstack
+    entrypoint: ["/vui/init_localstack.sh"]
+    restart: "on-failure:10"

@@ -78,18 +78,30 @@ install: build
 
 # Run the application
 run: build
-	./$(BINARY_NAME)
+	echo "Export VaultAWS environment variables" && \
+		export AWS_CONFIG_FILE=./sandbox/cfg/aws && \
+		eval $$(aws configure export-credentials --profile vui-iam-role --format env) && \
+	echo "Export Vault LDAP environment variables" && \
+		export LDAP_USERNAME=testuser && \
+		export LDAP_PASSWORD=testpassword && \
+	echo "Export Vault Token environment variables" && \
+		export VAULT_TOKEN=vui-sandbox-token && \
+	echo "Run the application" && \
+		./$(BINARY_NAME)
 
-up:
+dev-up:
 	cd sandbox && docker-compose up -d
 
-logs:
+dev-build:
+	cd sandbox && docker-compose build
+
+dev-logs:
 	cd sandbox && docker-compose logs -f
 
-ps:
+dev-ps:
 	cd sandbox && docker-compose ps
 
-down:
+dev-down:
 	cd sandbox && docker-compose down
 
 # Create release packages

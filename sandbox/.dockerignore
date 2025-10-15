@@ -1,0 +1,4 @@
+./vol/
+./files/
+
+docker-compose.yml
