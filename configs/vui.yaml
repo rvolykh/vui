@@ -35,3 +35,11 @@ vaults:
       aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
       aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
       aws_session_token: "${AWS_SESSION_TOKEN}"
+
+  vault-azure-todo:
+    address: "http://localhost:8201"
+    auth_method: "azure"
+    namespace: ""
+    auth_config:
+      azure_role: "vui-azure-role"
+      azure_resource: "TODO"
