@@ -12,9 +12,7 @@ import (
 func TestNewApp(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
-		App: config.AppConfig{
-			DefaultVault: "test",
-		},
+		App: config.AppConfig{},
 		Vaults: map[string]config.VaultProfile{
 			"test": {
 				Address:    "http://localhost:8200",

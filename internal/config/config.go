@@ -17,7 +17,6 @@ type Config struct {
 
 // AppConfig contains general application settings
 type AppConfig struct {
-	DefaultVault     string `mapstructure:"default_vault"`
 	Theme            string `mapstructure:"theme"`
 	RefreshInterval  int    `mapstructure:"refresh_interval"`
 	MaxSecretSize    int    `mapstructure:"max_secret_size"`
@@ -28,7 +27,6 @@ type AppConfig struct {
 type VaultProfile struct {
 	Address    string                 `mapstructure:"address"`
 	AuthMethod string                 `mapstructure:"auth_method"`
-	Token      string                 `mapstructure:"token"`
 	Namespace  string                 `mapstructure:"namespace"`
 	AuthConfig map[string]interface{} `mapstructure:"auth_config"`
 }
@@ -89,7 +87,7 @@ type UIConfig struct {
 
 // Load loads the configuration from files and environment variables
 func Load() (*Config, error) {
-	viper.SetConfigName("default")
+	viper.SetConfigName("vui.yaml")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath("./configs")
 	viper.AddConfigPath("$HOME/.vui")
@@ -107,7 +105,13 @@ func Load() (*Config, error) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, fmt.Errorf("error reading config file: %w", err)
 		}
-		// Config file not found, use defaults and environment variables
+
+		// Create config file
+		os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".vui"), 0755)
+		configFile := filepath.Join(os.Getenv("HOME"), ".vui", "vui.yaml")
+		if _, err := os.Stat(configFile); os.IsNotExist(err) {
+			viper.WriteConfigAs(configFile)
+		}
 	}
 
 	// Expand environment variables in config
@@ -116,13 +120,11 @@ func Load() (*Config, error) {
 		viper.Set(k, os.ExpandEnv(v))
 	}
 
+	// Parse config
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("error unmarshaling config: %w", err)
 	}
-
-	// Override with environment variables if set
-	overrideWithEnvVars(&config)
 
 	return &config, nil
 }
@@ -130,7 +132,6 @@ func Load() (*Config, error) {
 // setDefaults sets default configuration values
 func setDefaults() {
 	// App defaults
-	viper.SetDefault("app.default_vault", "default")
 	viper.SetDefault("app.theme", "dark")
 	viper.SetDefault("app.refresh_interval", 30)
 	viper.SetDefault("app.max_secret_size", 10240)
@@ -143,30 +144,10 @@ func setDefaults() {
 	viper.SetDefault("ui.tree_width", 40)
 
 	// Vaults defaults
-	viper.SetDefault("vaults.default.address", "http://localhost:8200")
-	viper.SetDefault("vaults.default.auth_method", "token")
-	viper.SetDefault("vaults.default.namespace", "")
-}
-
-// overrideWithEnvVars overrides configuration with environment variables
-func overrideWithEnvVars(config *Config) {
-	defaultVaultName := config.App.DefaultVault
-	if defaultVaultName == "" {
-		defaultVaultName = "default"
-	}
-
-	if defaultProfile, ok := config.Vaults[defaultVaultName]; ok {
-		if addr := os.Getenv("VAULT_ADDR"); addr != "" {
-			defaultProfile.Address = addr
-		}
-		if token := os.Getenv("VAULT_TOKEN"); token != "" {
-			defaultProfile.Token = token
-		}
-		if namespace := os.Getenv("VAULT_NAMESPACE"); namespace != "" {
-			defaultProfile.Namespace = namespace
-		}
-		config.Vaults[defaultVaultName] = defaultProfile
-	}
+	viper.SetDefault("vaults.local.address", "http://localhost:8200")
+	viper.SetDefault("vaults.local.auth_method", "token")
+	viper.SetDefault("vaults.local.namespace", "")
+	viper.SetDefault("vaults.local.auth_config.token", "${VAULT_TOKEN}")
 }
 
 // Save saves the configuration to a file

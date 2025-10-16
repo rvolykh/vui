@@ -99,7 +99,7 @@ dev-logs:
 	cd sandbox && docker-compose logs -f
 
 dev-ps:
-	cd sandbox && docker-compose ps
+	cd sandbox && docker-compose ps -a
 
 dev-down:
 	cd sandbox && docker-compose down

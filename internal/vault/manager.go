@@ -38,7 +38,6 @@ func NewManager(cfg *config.Config, logger *logrus.Logger) (*Manager, error) {
 	manager := &Manager{
 		config:        cfg,
 		clients:       make(map[string]*Client),
-		activeVault:   cfg.App.DefaultVault,
 		connectionMgr: NewConnectionManager(logger),
 		authMgr:       NewAuthManager(logger),
 		logger:        logger,
@@ -507,7 +506,6 @@ func (m *Manager) ReloadConfiguration() error {
 func profileChanged(old, new config.VaultProfile) bool {
 	return old.Address != new.Address ||
 		old.AuthMethod != new.AuthMethod ||
-		old.Token != new.Token ||
 		old.Namespace != new.Namespace ||
 		!authConfigEqual(old.AuthConfig, new.AuthConfig)
 }

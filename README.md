@@ -94,34 +94,28 @@ VUI uses YAML configuration files with environment variable support.
 ### Default Configuration
 
 The application looks for configuration in:
-1. `./configs/default.yaml`
-2. `$HOME/.vui/config.yaml`
-3. `/etc/vui/config.yaml`
-
-### Environment Variables
-
-- `VAULT_ADDR` - Vault server address
-- `VAULT_TOKEN` - Vault authentication token
-- `VAULT_NAMESPACE` - Vault namespace
+1. `./configs/vui.yaml`
+2. `$HOME/.vui/vui.yaml`
+3. `/etc/vui/vui.yaml`
 
 ### Example Configuration
 
 ```yaml
 app:
-  default_vault: "default"
   theme: "dark"
   refresh_interval: 30
-
-vault:
-  address: "http://localhost:8200"
-  auth_method: "token"
-  token: ""
-  namespace: ""
 
 ui:
   show_hidden_secrets: false
   confirm_deletions: true
   auto_refresh: true
+
+vaults:
+  local:
+    address: "http://localhost:8200"
+    auth_method: "token"
+    token: "${VAULT_TOKEN}" # variable will be read from environment variables once app is started
+    namespace: ""
 ```
 
 ### Advanced Authentication Examples

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,43 +14,16 @@ func TestLoad(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Verify default values
-	assert.Equal(t, "default", config.App.DefaultVault)
 	assert.Equal(t, "dark", config.App.Theme)
 	assert.Equal(t, 30, config.App.RefreshInterval)
-	assert.Equal(t, "http://localhost:8200", config.Vaults["default"].Address)
-	assert.Equal(t, "token", config.Vaults["default"].AuthMethod)
-}
-
-func TestLoadWithEnvVars(t *testing.T) {
-	// Set environment variables
-	os.Setenv("VAULT_ADDR", "https://vault.example.com")
-	os.Setenv("VAULT_TOKEN", "test-token")
-	os.Setenv("VAULT_NAMESPACE", "test-namespace")
-	defer func() {
-		os.Unsetenv("VAULT_ADDR")
-		os.Unsetenv("VAULT_TOKEN")
-		os.Unsetenv("VAULT_NAMESPACE")
-	}()
-
-	config, err := Load()
-	require.NoError(t, err)
-	require.NotNil(t, config)
-
-	// Verify environment variable overrides
-	defaultVault := config.App.DefaultVault
-	if defaultVault == "" {
-		defaultVault = "default"
-	}
-	assert.Equal(t, "https://vault.example.com", config.Vaults[defaultVault].Address)
-	assert.Equal(t, "test-token", config.Vaults[defaultVault].Token)
-	assert.Equal(t, "test-namespace", config.Vaults[defaultVault].Namespace)
+	assert.Equal(t, "http://localhost:8200", config.Vaults["local"].Address)
+	assert.Equal(t, "token", config.Vaults["local"].AuthMethod)
 }
 
 func TestConfigSave(t *testing.T) {
 	config := &Config{
 		App: AppConfig{
-			DefaultVault: "test",
-			Theme:        "light",
+			Theme: "light",
 		},
 		Vaults: map[string]VaultProfile{
 			"default": {

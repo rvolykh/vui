@@ -64,9 +64,9 @@ func (ws *ProfilesTitle) buildContent(width int) string {
 
 	// Define configuration paths
 	configPaths := []string{
-		"./configs/default.yaml",
-		"$HOME/.vui/default.yaml",
-		"/etc/vui/default.yaml",
+		"./configs/vui.yaml",
+		"$HOME/.vui/vui.yaml",
+		"/etc/vui/vui.yaml",
 	}
 
 	// Calculate inner width (excluding borders)

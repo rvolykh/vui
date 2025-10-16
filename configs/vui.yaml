@@ -14,8 +14,9 @@ vaults:
   vault-token:
     address: "http://localhost:8200"
     auth_method: "token"
-    token: "${VAULT_TOKEN}"
     namespace: ""
+    auth_config:
+      token: "${VAULT_TOKEN}"
 
   vault-ldap:
     address: "http://localhost:8200"
@@ -30,7 +31,7 @@ vaults:
     auth_method: "aws"
     namespace: ""
     auth_config:
-      role: "vui-iam-role"
+      aws_role: "vui-iam-role"
       aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
       aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
       aws_session_token: "${AWS_SESSION_TOKEN}"

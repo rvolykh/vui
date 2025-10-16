@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/api"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/sirupsen/logrus"
 )
@@ -68,11 +68,12 @@ func (am *AuthManager) Authenticate(client *api.Client, profile *config.VaultPro
 
 // authenticateWithToken authenticates using a token
 func (am *AuthManager) authenticateWithToken(client *api.Client, profile *config.VaultProfile) error {
-	if profile.Token == "" {
+	token, ok := profile.AuthConfig["token"].(string)
+	if !ok || token == "" {
 		return fmt.Errorf("token is required for token authentication")
 	}
 
-	client.SetToken(profile.Token)
+	client.SetToken(token)
 	return nil
 }
 
@@ -89,7 +90,7 @@ func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.
 	}
 
 	// Authenticate with LDAP
-	secret, err := client.Logical().Write("auth/ldap/login/" + username, map[string]interface{}{
+	secret, err := client.Logical().Write("auth/ldap/login/"+username, map[string]interface{}{
 		"password": password,
 	})
 	if err != nil {
@@ -118,36 +119,15 @@ func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.V
 
 	sessionToken := profile.AuthConfig["aws_session_token"].(string)
 
-	am.logger.Warn("--------------------------------")
-	am.logger.Warn("accessKeyID", accessKeyID)
-	am.logger.Warn("secretAccessKey", secretAccessKey)
-	am.logger.Warn("sessionToken", sessionToken)
-	am.logger.Warn("--------------------------------")
-
-	role, ok := profile.AuthConfig["role"].(string)
+	role, ok := profile.AuthConfig["aws_role"].(string)
 	if !ok || role == "" {
-		return fmt.Errorf("role is required for AWS authentication")
+		return fmt.Errorf("aws_role is required for AWS authentication")
 	}
 
 	region, _ := profile.AuthConfig["aws_region"].(string)
 	if region == "" {
 		region = "us-east-1"
 	}
-
-	// // Authenticate with AWS
-	// authData := map[string]interface{}{
-	// 	"role":                    role,
-	// 	"iam_http_request_method": "POST",
-	// 	"iam_request_url":         "https://sts.amazonaws.com/",
-	// 	"iam_request_body":        "Action=GetCallerIdentity&Version=2011-06-15",
-	// 	"iam_request_headers": map[string]string{
-	// 		"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-	// 	},
-	// }
-
-	// if sessionToken != "" {
-	// 	authData["iam_request_headers"].(map[string]string)["X-Amz-Security-Token"] = sessionToken
-	// }
 
 	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
 
@@ -458,7 +438,7 @@ func (am *AuthManager) ValidateAuthConfig(profile *config.VaultProfile) error {
 
 // validateTokenConfig validates token authentication configuration
 func (am *AuthManager) validateTokenConfig(profile *config.VaultProfile) error {
-	if profile.Token == "" {
+	if token, ok := profile.AuthConfig["token"].(string); !ok || token == "" {
 		return fmt.Errorf("token is required for token authentication")
 	}
 	return nil
