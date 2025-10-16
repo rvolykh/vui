@@ -25,10 +25,10 @@ type AppConfig struct {
 
 // VaultProfile represents a vault connection profile
 type VaultProfile struct {
-	Address    string                 `mapstructure:"address"`
-	AuthMethod string                 `mapstructure:"auth_method"`
-	Namespace  string                 `mapstructure:"namespace"`
-	AuthConfig map[string]interface{} `mapstructure:"auth_config"`
+	Address    string     `mapstructure:"address"`
+	AuthMethod string     `mapstructure:"auth_method"`
+	Namespace  string     `mapstructure:"namespace"`
+	AuthConfig AuthConfig `mapstructure:"auth_config"`
 }
 
 // AuthConfig represents authentication configuration for different methods
@@ -36,26 +36,24 @@ type AuthConfig struct {
 	// Token authentication
 	Token string `mapstructure:"token,omitempty"`
 
-	// LDAP authentication
+	// LDAP authentication & Userpass authentication
 	Username string `mapstructure:"username,omitempty"`
 	Password string `mapstructure:"password,omitempty"`
 
 	// AWS authentication
+	AWSRole            string `mapstructure:"aws_role,omitempty"`
 	AWSAccessKeyID     string `mapstructure:"aws_access_key_id,omitempty"`
 	AWSSecretAccessKey string `mapstructure:"aws_secret_access_key,omitempty"`
 	AWSSessionToken    string `mapstructure:"aws_session_token,omitempty"`
 	AWSRegion          string `mapstructure:"aws_region,omitempty"`
-	AWSRole            string `mapstructure:"aws_role,omitempty"`
 
 	// Azure authentication
-	AzureTenantID     string `mapstructure:"azure_tenant_id,omitempty"`
-	AzureClientID     string `mapstructure:"azure_client_id,omitempty"`
-	AzureClientSecret string `mapstructure:"azure_client_secret,omitempty"`
-	AzureResource     string `mapstructure:"azure_resource,omitempty"`
+	AzureRole     string `mapstructure:"azure_role,omitempty"`
+	AzureResource string `mapstructure:"azure_resource,omitempty"`
 
 	// GCP authentication
-	GCPCredentials string `mapstructure:"gcp_credentials,omitempty"`
 	GCPRole        string `mapstructure:"gcp_role,omitempty"`
+	GCPCredentials string `mapstructure:"gcp_credentials,omitempty"`
 	GCPProject     string `mapstructure:"gcp_project,omitempty"`
 
 	// Kubernetes authentication
@@ -66,10 +64,6 @@ type AuthConfig struct {
 	// JWT authentication
 	JWTRole string `mapstructure:"jwt_role,omitempty"`
 	JWT     string `mapstructure:"jwt,omitempty"`
-
-	// Userpass authentication
-	UserpassUsername string `mapstructure:"userpass_username,omitempty"`
-	UserpassPassword string `mapstructure:"userpass_password,omitempty"`
 
 	// Cert authentication
 	CertName string `mapstructure:"cert_name,omitempty"`

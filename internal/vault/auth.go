@@ -1,12 +1,14 @@
 package vault
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/api/auth/azure"
 	"github.com/rvolykh/vui/internal/adapters"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/sirupsen/logrus"
@@ -68,8 +70,8 @@ func (am *AuthManager) Authenticate(client *api.Client, profile *config.VaultPro
 
 // authenticateWithToken authenticates using a token
 func (am *AuthManager) authenticateWithToken(client *api.Client, profile *config.VaultProfile) error {
-	token, ok := profile.AuthConfig["token"].(string)
-	if !ok || token == "" {
+	token := profile.AuthConfig.Token
+	if token == "" {
 		return fmt.Errorf("token is required for token authentication")
 	}
 
@@ -79,13 +81,13 @@ func (am *AuthManager) authenticateWithToken(client *api.Client, profile *config
 
 // authenticateWithLDAP authenticates using LDAP
 func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.VaultProfile) error {
-	username, ok := profile.AuthConfig["username"].(string)
-	if !ok || username == "" {
+	username := profile.AuthConfig.Username
+	if username == "" {
 		return fmt.Errorf("username is required for LDAP authentication")
 	}
 
-	password, ok := profile.AuthConfig["password"].(string)
-	if !ok || password == "" {
+	password := profile.AuthConfig.Password
+	if password == "" {
 		return fmt.Errorf("password is required for LDAP authentication")
 	}
 
@@ -107,24 +109,24 @@ func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.
 
 // authenticateWithAWS authenticates using AWS
 func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.VaultProfile) error {
-	accessKeyID, ok := profile.AuthConfig["aws_access_key_id"].(string)
-	if !ok || accessKeyID == "" {
+	accessKeyID := profile.AuthConfig.AWSAccessKeyID
+	if accessKeyID == "" {
 		return fmt.Errorf("aws_access_key_id is required for AWS authentication")
 	}
 
-	secretAccessKey, ok := profile.AuthConfig["aws_secret_access_key"].(string)
-	if !ok || secretAccessKey == "" {
+	secretAccessKey := profile.AuthConfig.AWSSecretAccessKey
+	if secretAccessKey == "" {
 		return fmt.Errorf("aws_secret_access_key is required for AWS authentication")
 	}
 
-	sessionToken := profile.AuthConfig["aws_session_token"].(string)
+	sessionToken := profile.AuthConfig.AWSSessionToken
 
-	role, ok := profile.AuthConfig["aws_role"].(string)
-	if !ok || role == "" {
+	role := profile.AuthConfig.AWSRole
+	if role == "" {
 		return fmt.Errorf("aws_role is required for AWS authentication")
 	}
 
-	region, _ := profile.AuthConfig["aws_region"].(string)
+	region := profile.AuthConfig.AWSRegion
 	if region == "" {
 		region = "us-east-1"
 	}
@@ -151,54 +153,44 @@ func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.V
 
 // authenticateWithAzure authenticates using Azure
 func (am *AuthManager) authenticateWithAzure(client *api.Client, profile *config.VaultProfile) error {
-	tenantID, ok := profile.AuthConfig["azure_tenant_id"].(string)
-	if !ok || tenantID == "" {
-		return fmt.Errorf("azure_tenant_id is required for Azure authentication")
+	role := profile.AuthConfig.AzureRole
+	if role == "" {
+		return fmt.Errorf("azure_role is required for Azure authentication")
 	}
 
-	clientID, ok := profile.AuthConfig["azure_client_id"].(string)
-	if !ok || clientID == "" {
-		return fmt.Errorf("azure_client_id is required for Azure authentication")
+	opts := make([]azure.LoginOption, 0)
+	resource := profile.AuthConfig.AzureResource
+	if resource != "" {
+		opts = append(opts, azure.WithResource(resource))
 	}
 
-	clientSecret, ok := profile.AuthConfig["azure_client_secret"].(string)
-	if !ok || clientSecret == "" {
-		return fmt.Errorf("azure_client_secret is required for Azure authentication")
-	}
-
-	resource, _ := profile.AuthConfig["azure_resource"].(string)
-	if resource == "" {
-		resource = "https://management.azure.com/"
-	}
-
-	// Authenticate with Azure
-	secret, err := client.Logical().Write("auth/azure/login", map[string]interface{}{
-		"role":          profile.AuthConfig["azure_role"],
-		"tenant_id":     tenantID,
-		"client_id":     clientID,
-		"client_secret": clientSecret,
-		"resource":      resource,
-	})
+	azAuth, err := azure.NewAzureAuth(role, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to authenticate with Azure: %w", err)
+		return fmt.Errorf("unable to initialize Azure auth method: %w", err)
 	}
 
-	if secret == nil || secret.Auth == nil {
-		return fmt.Errorf("no authentication data returned from Azure")
+	authInfo, err := client.Auth().Login(context.TODO(), azAuth)
+	if err != nil {
+		return fmt.Errorf("unable to login to Azure auth method: %w", err)
+	}
+	if authInfo == nil {
+		return fmt.Errorf("no auth info was returned after login")
 	}
 
-	client.SetToken(secret.Auth.ClientToken)
 	return nil
 }
 
 // authenticateWithGCP authenticates using GCP
 func (am *AuthManager) authenticateWithGCP(client *api.Client, profile *config.VaultProfile) error {
-	role, ok := profile.AuthConfig["gcp_role"].(string)
-	if !ok || role == "" {
+	role := profile.AuthConfig.GCPRole
+	if role == "" {
 		return fmt.Errorf("gcp_role is required for GCP authentication")
 	}
 
-	project, _ := profile.AuthConfig["gcp_project"].(string)
+	project := profile.AuthConfig.GCPProject
+	if project == "" {
+		return fmt.Errorf("gcp_project is required for GCP authentication")
+	}
 
 	// Get GCP credentials
 	credentials, err := am.getGCPCredentials(profile)
@@ -226,8 +218,8 @@ func (am *AuthManager) authenticateWithGCP(client *api.Client, profile *config.V
 
 // authenticateWithKubernetes authenticates using Kubernetes
 func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *config.VaultProfile) error {
-	role, ok := profile.AuthConfig["k8s_role"].(string)
-	if !ok || role == "" {
+	role := profile.AuthConfig.K8sRole
+	if role == "" {
 		return fmt.Errorf("k8s_role is required for Kubernetes authentication")
 	}
 
@@ -256,13 +248,13 @@ func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *c
 
 // authenticateWithJWT authenticates using JWT
 func (am *AuthManager) authenticateWithJWT(client *api.Client, profile *config.VaultProfile) error {
-	role, ok := profile.AuthConfig["jwt_role"].(string)
-	if !ok || role == "" {
+	role := profile.AuthConfig.JWTRole
+	if role == "" {
 		return fmt.Errorf("jwt_role is required for JWT authentication")
 	}
 
-	jwt, ok := profile.AuthConfig["jwt"].(string)
-	if !ok || jwt == "" {
+	jwt := profile.AuthConfig.JWT
+	if jwt == "" {
 		return fmt.Errorf("jwt is required for JWT authentication")
 	}
 
@@ -285,14 +277,14 @@ func (am *AuthManager) authenticateWithJWT(client *api.Client, profile *config.V
 
 // authenticateWithUserpass authenticates using userpass
 func (am *AuthManager) authenticateWithUserpass(client *api.Client, profile *config.VaultProfile) error {
-	username, ok := profile.AuthConfig["userpass_username"].(string)
-	if !ok || username == "" {
-		return fmt.Errorf("userpass_username is required for userpass authentication")
+	username := profile.AuthConfig.Username
+	if username == "" {
+		return fmt.Errorf("username is required for userpass authentication")
 	}
 
-	password, ok := profile.AuthConfig["userpass_password"].(string)
-	if !ok || password == "" {
-		return fmt.Errorf("userpass_password is required for userpass authentication")
+	password := profile.AuthConfig.Password
+	if password == "" {
+		return fmt.Errorf("password is required for userpass authentication")
 	}
 
 	// Authenticate with userpass
@@ -313,18 +305,18 @@ func (am *AuthManager) authenticateWithUserpass(client *api.Client, profile *con
 
 // authenticateWithCert authenticates using certificates
 func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.VaultProfile) error {
-	certName, ok := profile.AuthConfig["cert_name"].(string)
-	if !ok || certName == "" {
+	certName := profile.AuthConfig.CertName
+	if certName == "" {
 		return fmt.Errorf("cert_name is required for cert authentication")
 	}
 
-	certPath, ok := profile.AuthConfig["cert_path"].(string)
-	if !ok || certPath == "" {
+	certPath := profile.AuthConfig.CertPath
+	if certPath == "" {
 		return fmt.Errorf("cert_path is required for cert authentication")
 	}
 
-	keyPath, ok := profile.AuthConfig["key_path"].(string)
-	if !ok || keyPath == "" {
+	keyPath := profile.AuthConfig.KeyPath
+	if keyPath == "" {
 		return fmt.Errorf("key_path is required for cert authentication")
 	}
 
@@ -363,12 +355,12 @@ func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.
 // getGCPCredentials gets GCP credentials from various sources
 func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, error) {
 	// Check if credentials are provided directly
-	if credentials, ok := profile.AuthConfig["gcp_credentials"].(string); ok && credentials != "" {
+	if credentials := profile.AuthConfig.GCPCredentials; credentials != "" {
 		return credentials, nil
 	}
 
 	// Check for credentials file path
-	if credsPath, ok := profile.AuthConfig["gcp_credentials_path"].(string); ok && credsPath != "" {
+	if credsPath := profile.AuthConfig.GCPCredentials; credsPath != "" {
 		credsData, err := os.ReadFile(credsPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to read GCP credentials file: %w", err)
@@ -390,14 +382,9 @@ func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, 
 
 // getKubernetesToken gets Kubernetes service account token
 func (am *AuthManager) getKubernetesToken(profile *config.VaultProfile) (string, error) {
-	// Check if token is provided directly
-	if token, ok := profile.AuthConfig["k8s_token"].(string); ok && token != "" {
-		return token, nil
-	}
-
 	// Check for custom token path
 	tokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	if customPath, ok := profile.AuthConfig["k8s_token_path"].(string); ok && customPath != "" {
+	if customPath := profile.AuthConfig.K8sTokenPath; customPath != "" {
 		tokenPath = customPath
 	}
 
@@ -438,7 +425,7 @@ func (am *AuthManager) ValidateAuthConfig(profile *config.VaultProfile) error {
 
 // validateTokenConfig validates token authentication configuration
 func (am *AuthManager) validateTokenConfig(profile *config.VaultProfile) error {
-	if token, ok := profile.AuthConfig["token"].(string); !ok || token == "" {
+	if token := profile.AuthConfig.Token; token == "" {
 		return fmt.Errorf("token is required for token authentication")
 	}
 	return nil
@@ -446,10 +433,10 @@ func (am *AuthManager) validateTokenConfig(profile *config.VaultProfile) error {
 
 // validateLDAPConfig validates LDAP authentication configuration
 func (am *AuthManager) validateLDAPConfig(profile *config.VaultProfile) error {
-	if username, ok := profile.AuthConfig["username"].(string); !ok || username == "" {
+	if username := profile.AuthConfig.Username; username == "" {
 		return fmt.Errorf("username is required for LDAP authentication")
 	}
-	if password, ok := profile.AuthConfig["password"].(string); !ok || password == "" {
+	if password := profile.AuthConfig.Password; password == "" {
 		return fmt.Errorf("password is required for LDAP authentication")
 	}
 	return nil
@@ -457,13 +444,13 @@ func (am *AuthManager) validateLDAPConfig(profile *config.VaultProfile) error {
 
 // validateAWSConfig validates AWS authentication configuration
 func (am *AuthManager) validateAWSConfig(profile *config.VaultProfile) error {
-	if accessKeyID, ok := profile.AuthConfig["aws_access_key_id"].(string); !ok || accessKeyID == "" {
+	if accessKeyID := profile.AuthConfig.AWSAccessKeyID; accessKeyID == "" {
 		return fmt.Errorf("aws_access_key_id is required for AWS authentication")
 	}
-	if secretAccessKey, ok := profile.AuthConfig["aws_secret_access_key"].(string); !ok || secretAccessKey == "" {
+	if secretAccessKey := profile.AuthConfig.AWSSecretAccessKey; secretAccessKey == "" {
 		return fmt.Errorf("aws_secret_access_key is required for AWS authentication")
 	}
-	if role, ok := profile.AuthConfig["aws_role"].(string); !ok || role == "" {
+	if role := profile.AuthConfig.AWSRole; role == "" {
 		return fmt.Errorf("aws_role is required for AWS authentication")
 	}
 	return nil
@@ -471,21 +458,15 @@ func (am *AuthManager) validateAWSConfig(profile *config.VaultProfile) error {
 
 // validateAzureConfig validates Azure authentication configuration
 func (am *AuthManager) validateAzureConfig(profile *config.VaultProfile) error {
-	if tenantID, ok := profile.AuthConfig["azure_tenant_id"].(string); !ok || tenantID == "" {
-		return fmt.Errorf("azure_tenant_id is required for Azure authentication")
-	}
-	if clientID, ok := profile.AuthConfig["azure_client_id"].(string); !ok || clientID == "" {
-		return fmt.Errorf("azure_client_id is required for Azure authentication")
-	}
-	if clientSecret, ok := profile.AuthConfig["azure_client_secret"].(string); !ok || clientSecret == "" {
-		return fmt.Errorf("azure_client_secret is required for Azure authentication")
+	if role := profile.AuthConfig.AzureRole; role == "" {
+		return fmt.Errorf("azure_role is required for Azure authentication")
 	}
 	return nil
 }
 
 // validateGCPConfig validates GCP authentication configuration
 func (am *AuthManager) validateGCPConfig(profile *config.VaultProfile) error {
-	if role, ok := profile.AuthConfig["gcp_role"].(string); !ok || role == "" {
+	if role := profile.AuthConfig.GCPRole; role == "" {
 		return fmt.Errorf("gcp_role is required for GCP authentication")
 	}
 	return nil
@@ -493,7 +474,7 @@ func (am *AuthManager) validateGCPConfig(profile *config.VaultProfile) error {
 
 // validateKubernetesConfig validates Kubernetes authentication configuration
 func (am *AuthManager) validateKubernetesConfig(profile *config.VaultProfile) error {
-	if role, ok := profile.AuthConfig["k8s_role"].(string); !ok || role == "" {
+	if role := profile.AuthConfig.K8sRole; role == "" {
 		return fmt.Errorf("k8s_role is required for Kubernetes authentication")
 	}
 	return nil
@@ -501,10 +482,10 @@ func (am *AuthManager) validateKubernetesConfig(profile *config.VaultProfile) er
 
 // validateJWTConfig validates JWT authentication configuration
 func (am *AuthManager) validateJWTConfig(profile *config.VaultProfile) error {
-	if role, ok := profile.AuthConfig["jwt_role"].(string); !ok || role == "" {
+	if role := profile.AuthConfig.JWTRole; role == "" {
 		return fmt.Errorf("jwt_role is required for JWT authentication")
 	}
-	if jwt, ok := profile.AuthConfig["jwt"].(string); !ok || jwt == "" {
+	if jwt := profile.AuthConfig.JWT; jwt == "" {
 		return fmt.Errorf("jwt is required for JWT authentication")
 	}
 	return nil
@@ -512,26 +493,26 @@ func (am *AuthManager) validateJWTConfig(profile *config.VaultProfile) error {
 
 // validateUserpassConfig validates userpass authentication configuration
 func (am *AuthManager) validateUserpassConfig(profile *config.VaultProfile) error {
-	if username, ok := profile.AuthConfig["userpass_username"].(string); !ok || username == "" {
-		return fmt.Errorf("userpass_username is required for userpass authentication")
+	if username := profile.AuthConfig.Username; username == "" {
+		return fmt.Errorf("username is required for userpass authentication")
 	}
-	if password, ok := profile.AuthConfig["userpass_password"].(string); !ok || password == "" {
-		return fmt.Errorf("userpass_password is required for userpass authentication")
+	if password := profile.AuthConfig.Password; password == "" {
+		return fmt.Errorf("password is required for userpass authentication")
 	}
 	return nil
 }
 
 // validateCertConfig validates certificate authentication configuration
 func (am *AuthManager) validateCertConfig(profile *config.VaultProfile) error {
-	if certName, ok := profile.AuthConfig["cert_name"].(string); !ok || certName == "" {
+	if certName := profile.AuthConfig.CertName; certName == "" {
 		return fmt.Errorf("cert_name is required for cert authentication")
 	}
-	certPath, ok := profile.AuthConfig["cert_path"].(string)
-	if !ok || certPath == "" {
+	certPath := profile.AuthConfig.CertPath
+	if certPath == "" {
 		return fmt.Errorf("cert_path is required for cert authentication")
 	}
-	keyPath, ok := profile.AuthConfig["key_path"].(string)
-	if !ok || keyPath == "" {
+	keyPath := profile.AuthConfig.KeyPath
+	if keyPath == "" {
 		return fmt.Errorf("key_path is required for cert authentication")
 	}
 

@@ -511,14 +511,6 @@ func profileChanged(old, new config.VaultProfile) bool {
 }
 
 // authConfigEqual checks if two auth configs are equal
-func authConfigEqual(a, b map[string]interface{}) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if b[k] != v {
-			return false
-		}
-	}
-	return true
+func authConfigEqual(a, b config.AuthConfig) bool {
+	return a == b
 }
