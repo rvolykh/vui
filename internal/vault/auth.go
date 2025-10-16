@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/rvolykh/vui/internal/adapters"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/sirupsen/logrus"
 )
@@ -131,7 +131,7 @@ func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.V
 
 	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
 
-	data, err := awsutil.GenerateLoginData(creds, "", region, hclog.Default())
+	data, err := awsutil.GenerateLoginData(creds, "", region, adapters.NewHclogAdapter(am.logger))
 	if err != nil {
 		return fmt.Errorf("unable to generate login data for AWS auth endpoint: %w", err)
 	}

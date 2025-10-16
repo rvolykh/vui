@@ -72,10 +72,6 @@ vet:
 lint:
 	golangci-lint run
 
-# Install the application
-install: build
-	cp $(BINARY_NAME) /usr/local/bin/
-
 # Run the application
 run: build
 	echo "Export VaultAWS environment variables" && \
@@ -125,9 +121,8 @@ help:
 	@echo "  fmt          - Format code"
 	@echo "  vet          - Run go vet"
 	@echo "  lint         - Run golangci-lint"
-	@echo "  install      - Install the application"
 	@echo "  run          - Build and run the application"
-	@echo "  up           - Setup test environment"
-	@echo "  down         - Shutdown test environment"
+	@echo "  dev-up       - Setup test environment"
+	@echo "  dev-down     - Shutdown test environment"
 	@echo "  release      - Create release packages"
 	@echo "  help         - Show this help"
