@@ -36,6 +36,16 @@ vaults:
       aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
       aws_session_token: "${AWS_SESSION_TOKEN}"
 
+  vault-k8s:
+    address: "http://localhost:8200"
+    auth_method: "kubernetes"
+    namespace: ""
+    auth_config:
+      k8s_role: "vui-k8s-role"
+      k8s_service_account: "vui-sandbox-app-sa"
+      k8s_audience: "vault"
+      k8s_ttl: 3600
+
   vault-azure-todo:
     address: "http://localhost:8201"
     auth_method: "azure"

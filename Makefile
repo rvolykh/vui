@@ -82,14 +82,18 @@ run: build
 		export LDAP_PASSWORD=testpassword && \
 	echo "Export Vault Token environment variables" && \
 		export VAULT_TOKEN=vui-sandbox-token && \
+	echo "Use kind context" && \
+		kubectl config use-context kind-vui-sandbox
 	echo "Run the application" && \
 		./$(BINARY_NAME)
 
 dev-up:
-	cd sandbox && docker-compose up -d
-
-dev-build:
-	cd sandbox && docker-compose build
+	mkdir -p sandbox/vol/kind/pki sandbox/vol/kind/kube
+	kind create cluster --config=./sandbox/kind.yml
+	kubectl cluster-info --context kind-vui-sandbox
+	kind export kubeconfig --name vui-sandbox --kubeconfig ./sandbox/vol/kind/kube/config
+	kubectl --context kind-vui-sandbox apply -f sandbox/files/kubernetes.yaml
+	cd sandbox && docker-compose up -d --build
 
 dev-logs:
 	cd sandbox && docker-compose logs -f
@@ -97,7 +101,8 @@ dev-logs:
 dev-ps:
 	cd sandbox && docker-compose ps -a
 
-dev-down:
+dev-down: clean
+	kind delete cluster --name vui-sandbox
 	cd sandbox && docker-compose down
 
 # Create release packages

@@ -6,10 +6,13 @@ services:
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
+      - VAULT_LOG_LEVEL=debug
     cap_add:
       - IPC_LOCK
     volumes:
       - ./vol/vault/file:/vault/file
+    extra_hosts:
+      - "kubernetes.default.svc.cluster.local:host-gateway"
 
   ldap:
     image: osixia/openldap:1.5.0
@@ -60,6 +63,23 @@ services:
       - localstack
     entrypoint: ["/vui/init_vault_aws.sh"]
     restart: "on-failure:10"
+
+  init_vault_k8s:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_vault_k8s:/status/vault_k8s
+      - ./vol/kind/kube:/root/.kube
+      - ./vol/kind/pki:/etc/kubernetes/pki
+    depends_on:
+      - vault
+    entrypoint: ["/vui/init_vault_k8s.sh"]
+    restart: "on-failure:10"
+    extra_hosts:
+      - "kubernetes.default.svc.cluster.local:host-gateway"
 
   init_localstack:
     build:

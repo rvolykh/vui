@@ -1,0 +1,45 @@
+# K8s resources for Vui Sandbox
+# apply this to your local k8s cluster
+
+# SA be used by Vault
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vui-sandbox-vault-sa
+  namespace: default
+
+---
+
+# Long lived token for Vault
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vui-sandbox-vault-sa-token
+  annotations:
+    kubernetes.io/service-account.name: vui-sandbox-vault-sa
+type: kubernetes.io/service-account-token
+
+---
+
+# ClusterRoleBinding to allow the Vault service account to perform token reviews
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: role-tokenreview-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: vui-sandbox-vault-sa
+    namespace: default
+
+---
+
+# SA we will use to access Vault in VUI
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vui-sandbox-app-sa
+  namespace: default

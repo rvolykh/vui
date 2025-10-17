@@ -4,14 +4,21 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/azure"
+	"github.com/hashicorp/vault/api/auth/kubernetes"
 	"github.com/rvolykh/vui/internal/adapters"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/utils"
 	"github.com/sirupsen/logrus"
+	k8sauth "k8s.io/api/authentication/v1"
+	k8smeta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8s "k8s.io/client-go/kubernetes"
+	k8scmd "k8s.io/client-go/tools/clientcmd"
 )
 
 // AuthManager manages authentication for different vault connections
@@ -223,26 +230,37 @@ func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *c
 		return fmt.Errorf("k8s_role is required for Kubernetes authentication")
 	}
 
-	// Get Kubernetes token
-	token, err := am.getKubernetesToken(profile)
+	var (
+		token string
+		err   error
+
+		opts []kubernetes.LoginOption
+	)
+	if profile.AuthConfig.K8sToken != "" {
+		token = profile.AuthConfig.K8sToken
+	} else if profile.AuthConfig.K8sServiceAccount != "" {
+		token, err = am.getKubernetesToken(profile)
+		if err != nil {
+			return fmt.Errorf("failed to get Kubernetes token: %w", err)
+		}
+	}
+	if token != "" {
+		opts = append(opts, kubernetes.WithServiceAccountToken(token))
+	}
+
+	k8sAuth, err := kubernetes.NewKubernetesAuth(role, opts...)
 	if err != nil {
-		return fmt.Errorf("failed to get Kubernetes token: %w", err)
+		return fmt.Errorf("unable to initialize Kubernetes auth method: %w", err)
 	}
 
-	// Authenticate with Kubernetes
-	secret, err := client.Logical().Write("auth/kubernetes/login", map[string]interface{}{
-		"role": role,
-		"jwt":  token,
-	})
+	authInfo, err := client.Auth().Login(context.TODO(), k8sAuth)
 	if err != nil {
-		return fmt.Errorf("failed to authenticate with Kubernetes: %w", err)
+		return fmt.Errorf("unable to log in with Kubernetes auth: %w", err)
+	}
+	if authInfo == nil {
+		return fmt.Errorf("no auth info was returned after login")
 	}
 
-	if secret == nil || secret.Auth == nil {
-		return fmt.Errorf("no authentication data returned from Kubernetes")
-	}
-
-	client.SetToken(secret.Auth.ClientToken)
 	return nil
 }
 
@@ -382,19 +400,40 @@ func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, 
 
 // getKubernetesToken gets Kubernetes service account token
 func (am *AuthManager) getKubernetesToken(profile *config.VaultProfile) (string, error) {
-	// Check for custom token path
-	tokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	if customPath := profile.AuthConfig.K8sTokenPath; customPath != "" {
-		tokenPath = customPath
-	}
+	homeDir, _ := os.UserHomeDir()
 
-	// Read token from file
-	tokenData, err := os.ReadFile(tokenPath)
+	var (
+		serviceAccount = profile.AuthConfig.K8sServiceAccount
+
+		kubeconfigPath = utils.Coalesce(profile.AuthConfig.K8sConfigPath, filepath.Join(homeDir, ".kube", "config"))
+		audience       = utils.Coalesce(profile.AuthConfig.K8sAudience, "vault")
+		namespace      = utils.Coalesce(profile.AuthConfig.K8sNamespace, "default")
+		ttl            = utils.Coalesce(profile.AuthConfig.K8sTTL, int64(3600))
+	)
+
+	config, err := k8scmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read Kubernetes token: %w", err)
+		return "", fmt.Errorf("failed to build Kubernetes config: %w", err)
 	}
 
-	return string(tokenData), nil
+	clientset, err := k8s.NewForConfig(config)
+	if err != nil {
+		return "", fmt.Errorf("failed to create Kubernetes clientset: %w", err)
+	}
+
+	tr := &k8sauth.TokenRequest{
+		Spec: k8sauth.TokenRequestSpec{
+			Audiences:         []string{audience},
+			ExpirationSeconds: &ttl,
+		},
+	}
+	tokenRequest, err := clientset.CoreV1().ServiceAccounts(namespace).
+		CreateToken(context.TODO(), serviceAccount, tr, k8smeta.CreateOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to create Kubernetes token: %w", err)
+	}
+
+	return tokenRequest.Status.Token, nil
 }
 
 // ValidateAuthConfig validates authentication configuration for a profile

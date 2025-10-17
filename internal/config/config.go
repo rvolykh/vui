@@ -57,9 +57,13 @@ type AuthConfig struct {
 	GCPProject     string `mapstructure:"gcp_project,omitempty"`
 
 	// Kubernetes authentication
-	K8sRole        string `mapstructure:"k8s_role,omitempty"`
-	K8sTokenPath   string `mapstructure:"k8s_token_path,omitempty"`
-	K8sServicePath string `mapstructure:"k8s_service_path,omitempty"`
+	K8sRole           string `mapstructure:"k8s_role,omitempty"`
+	K8sToken          string `mapstructure:"k8s_token,omitempty"`
+	K8sConfigPath     string `mapstructure:"k8s_config_path,omitempty"`
+	K8sNamespace      string `mapstructure:"k8s_namespace,omitempty"`
+	K8sServiceAccount string `mapstructure:"k8s_service_account,omitempty"`
+	K8sAudience       string `mapstructure:"k8s_audience,omitempty"`
+	K8sTTL            int64  `mapstructure:"k8s_ttl,omitempty"`
 
 	// JWT authentication
 	JWTRole string `mapstructure:"jwt_role,omitempty"`
