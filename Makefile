@@ -72,8 +72,25 @@ vet:
 lint:
 	golangci-lint run
 
-# Run the application
-run: build
+dev-build:
+	cd sandbox && docker-compose build
+
+dev-up:
+	mkdir -p sandbox/vol/kind/pki sandbox/vol/kind/kube
+	kind create cluster --config=./sandbox/kind.yml || true
+	kubectl cluster-info --context kind-vui-sandbox
+	kind export kubeconfig --name vui-sandbox --kubeconfig ./sandbox/vol/kind/kube/config
+	kubectl --context kind-vui-sandbox apply -f sandbox/files/kubernetes.yaml
+	cd sandbox && docker-compose up -d
+
+dev-logs:
+	cd sandbox && docker-compose logs -f
+
+dev-ps:
+	cd sandbox && docker-compose ps -a
+
+# Run VUI with necessary environment variables for Sandbox environment
+dev-run: build
 	echo "Export VaultAWS environment variables" && \
 		export AWS_CONFIG_FILE=./sandbox/cfg/aws && \
 		eval $$(aws configure export-credentials --profile vui-iam-role --format env) && \
@@ -83,23 +100,13 @@ run: build
 	echo "Export Vault Token environment variables" && \
 		export VAULT_TOKEN=vui-sandbox-token && \
 	echo "Use kind context" && \
-		kubectl config use-context kind-vui-sandbox
+		kubectl config use-context kind-vui-sandbox && \
+	echo "OIDC Credentials" && \
+	    echo " - Username: vui" && \
+		echo " - Password: vui" && \
+        sleep 3 && \
 	echo "Run the application" && \
 		./$(BINARY_NAME)
-
-dev-up:
-	mkdir -p sandbox/vol/kind/pki sandbox/vol/kind/kube
-	kind create cluster --config=./sandbox/kind.yml
-	kubectl cluster-info --context kind-vui-sandbox
-	kind export kubeconfig --name vui-sandbox --kubeconfig ./sandbox/vol/kind/kube/config
-	kubectl --context kind-vui-sandbox apply -f sandbox/files/kubernetes.yaml
-	cd sandbox && docker-compose up -d --build
-
-dev-logs:
-	cd sandbox && docker-compose logs -f
-
-dev-ps:
-	cd sandbox && docker-compose ps -a
 
 dev-down: clean
 	kind delete cluster --name vui-sandbox

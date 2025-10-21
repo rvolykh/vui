@@ -46,6 +46,13 @@ vaults:
       k8s_audience: "vault"
       k8s_ttl: 3600
 
+  vault-oidc:
+    address: "http://localhost:8200"
+    auth_method: "oidc"
+    namespace: ""
+    auth_config:
+      oidc_role: "vui-oidc-role"
+
   vault-azure-todo:
     address: "http://localhost:8201"
     auth_method: "azure"

@@ -14,6 +14,7 @@ import (
 	"github.com/rvolykh/vui/internal/adapters"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/utils"
+	"github.com/rvolykh/vui/internal/vault/auth"
 	"github.com/sirupsen/logrus"
 	k8sauth "k8s.io/api/authentication/v1"
 	k8smeta "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +65,8 @@ func (am *AuthManager) Authenticate(client *api.Client, profile *config.VaultPro
 		return am.authenticateWithGCP(client, profile)
 	case "kubernetes":
 		return am.authenticateWithKubernetes(client, profile)
+	case "oidc":
+		return auth.AuthenticateWithOIDC(client, profile)
 	case "jwt":
 		return am.authenticateWithJWT(client, profile)
 	case "userpass":

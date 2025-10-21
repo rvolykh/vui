@@ -206,7 +206,7 @@ vaults:
 make test
 
 # Run tests with coverage
-make test-coverage
+make coverage
 
 # Run specific package tests
 go test ./internal/config/...
@@ -223,6 +223,42 @@ make vet
 
 # Run comprehensive linter (requires golangci-lint)
 make lint
+```
+
+## Sandbox
+
+Local playground environment with different vault auths / profiles.
+
+### Requirements
+
+- [kind](https://kind.sigs.k8s.io/)
+- [docker](https://www.docker.com/) / [podman](https://podman.io/)
+- `127.0.0.1    oidc` record on `/etc/hosts`
+
+### Commands
+
+```bash
+make dev-build
+      # Build Sandbox environment init image
+
+make dev-up
+      # Start Sandbox environment
+
+make dev-ps
+      # Check Sabdbox environment status
+      # All `init_` containers has to have status "Exited (0)"
+
+make dev-logs
+      # Check logs of Sandbox environment
+
+make dev-run
+      # Run VUI with necessary environment variables
+
+make dev-down
+      # Stop Sandbox environment
+
+make clean
+      # Cleanup temporary files, required when Sandbox should be re-created
 ```
 
 ## Acknowledgments

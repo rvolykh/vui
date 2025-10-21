@@ -36,6 +36,18 @@ services:
     volumes:
       - "./vol/localstack:/var/lib/localstack"
 
+  oidc:
+    # http://localhost:8080/realms/vui-sandbox-realm/protocol/openid-connect/auth?client_id=vui-sandbox-oidc-client-id&response_type=code&redirect_uri=http://localhost:8250/auth/callback
+    image: quay.io/keycloak/keycloak:26.4
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+    volumes:
+      - "./files/oidc_realm_config.json:/opt/keycloak/data/import/realm-config.json"
+    command: ["start-dev", "--import-realm"]
+
   init_vault_ldap:
     build:
       context: .
@@ -48,7 +60,7 @@ services:
       - vault
       - ldap
     entrypoint: ["/vui/init_vault_ldap.sh"]
-    restart: "on-failure:10"
+    restart: "on-failure"
 
   init_vault_aws:
     build:
@@ -62,7 +74,7 @@ services:
       - vault
       - localstack
     entrypoint: ["/vui/init_vault_aws.sh"]
-    restart: "on-failure:10"
+    restart: "on-failure"
 
   init_vault_k8s:
     build:
@@ -77,7 +89,7 @@ services:
     depends_on:
       - vault
     entrypoint: ["/vui/init_vault_k8s.sh"]
-    restart: "on-failure:10"
+    restart: "on-failure"
     extra_hosts:
       - "kubernetes.default.svc.cluster.local:host-gateway"
 
@@ -92,4 +104,18 @@ services:
     depends_on:
       - localstack
     entrypoint: ["/vui/init_localstack.sh"]
-    restart: "on-failure:10"
+    restart: "on-failure"
+
+  init_vault_oidc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_vault_oidc:/status/vault_oidc
+    depends_on:
+      - vault
+      - oidc
+    entrypoint: ["/vui/init_vault_oidc.sh"]
+    restart: "on-failure"

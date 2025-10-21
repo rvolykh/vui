@@ -1,0 +1,48 @@
+{
+    "realm": "vui-sandbox-realm",
+    "enabled": true,
+    "users": [
+        {
+            "username": "vui",
+            "email": "vui-sandbox-user@localhost",
+            "enabled": true,
+            "firstName": "VUI",
+            "lastName": "VUI",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "vui",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "user"
+            ]
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "user"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "vui-sandbox-oidc-client-id",
+            "protocol": "openid-connect",
+            "enabled": true,
+            "clientAuthenticatorType": "client-secret",
+            "secret": "vui-sandbox-oidc-client-secret",
+            "redirectUris": [
+                "http://localhost:8250/*"
+            ],
+            "webOrigins": [
+                "http://localhost:8250"
+            ],
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": true,
+            "publicClient": false
+        }
+    ]
+}

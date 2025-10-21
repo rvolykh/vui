@@ -65,6 +65,9 @@ type AuthConfig struct {
 	K8sAudience       string `mapstructure:"k8s_audience,omitempty"`
 	K8sTTL            int64  `mapstructure:"k8s_ttl,omitempty"`
 
+	// OIDC authentication
+	OIDCRole string `mapstructure:"oidc_role,omitempty"`
+
 	// JWT authentication
 	JWTRole string `mapstructure:"jwt_role,omitempty"`
 	JWT     string `mapstructure:"jwt,omitempty"`
