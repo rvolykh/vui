@@ -134,6 +134,14 @@ func (m *Manager) createClient(profile *config.VaultProfile) (*Client, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = profile.Address
 
+	if profile.CertPath != "" {
+		if err := apiConfig.ConfigureTLS(&api.TLSConfig{
+			CACert: profile.CertPath,
+		}); err != nil {
+			return nil, fmt.Errorf("failed to configure TLS: %w", err)
+		}
+	}
+
 	apiClient, err := api.NewClient(apiConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vault client: %w", err)

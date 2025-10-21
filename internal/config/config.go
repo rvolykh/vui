@@ -26,6 +26,7 @@ type AppConfig struct {
 // VaultProfile represents a vault connection profile
 type VaultProfile struct {
 	Address    string     `mapstructure:"address"`
+	CertPath   string     `mapstructure:"cert_path,omitempty"`
 	AuthMethod string     `mapstructure:"auth_method"`
 	Namespace  string     `mapstructure:"namespace"`
 	AuthConfig AuthConfig `mapstructure:"auth_config"`
@@ -73,9 +74,9 @@ type AuthConfig struct {
 	JWT     string `mapstructure:"jwt,omitempty"`
 
 	// Cert authentication
-	CertName string `mapstructure:"cert_name,omitempty"`
-	CertPath string `mapstructure:"cert_path,omitempty"`
-	KeyPath  string `mapstructure:"key_path,omitempty"`
+	CertName    string `mapstructure:"cert_name,omitempty"`
+	CertCrtPath string `mapstructure:"cert_crt_path,omitempty"`
+	CertKeyPath string `mapstructure:"cert_key_path,omitempty"`
 }
 
 // UIConfig contains user interface settings

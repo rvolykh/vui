@@ -116,7 +116,7 @@ dev-run: build
 	echo "OIDC Credentials" && \
 	    echo " - Username: vui" && \
 		echo " - Password: vui" && \
-        sleep 3 && \
+        sleep 1 && \
 	echo "Run the application" && \
 		./$(BINARY_NAME)
 

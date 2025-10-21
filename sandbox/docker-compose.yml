@@ -3,6 +3,7 @@ services:
     image: hashicorp/vault:1.20
     ports:
       - "127.0.0.1:8200:8200"
+      - "127.0.0.1:8208:8208"
     environment:
       - VAULT_ADDR=http://127.0.0.1:8200
       - VAULT_DEV_ROOT_TOKEN_ID=vui-sandbox-token
@@ -11,6 +12,10 @@ services:
       - IPC_LOCK
     volumes:
       - ./vol/vault/file:/vault/file
+      - ./vol/vault/certs:/vault/certs:rw
+      - ./files/vault_config.hcl:/vault/config/config.hcl
+      - ./files/vault.crt:/vault/certs/server.crt
+      - ./files/vault.key:/vault/certs/server.key
     extra_hosts:
       - "kubernetes.default.svc.cluster.local:host-gateway"
 
@@ -145,4 +150,22 @@ services:
     depends_on:
       - vault
     entrypoint: ["/vui/init_vault_userpass.sh"]
+    restart: "on-failure"
+
+  init_vault_cert:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    environment:
+      - VAULT_ADDR=https://vault:8208
+      - VAULT_CACERT=/vault/certs/server.crt
+    volumes:
+      - ./vol/init_vault_cert:/status/vault_cert
+      - ./files/vault.crt:/vault/certs/server.crt
+      - ./vol/certs:/certs
+    depends_on:
+      - vault
+    entrypoint: ["/vui/init_vault_cert.sh"]
     restart: "on-failure"

@@ -69,6 +69,16 @@ vaults:
       username: "${USERPASS_USERNAME}"
       password: "${USERPASS_PASSWORD}"
 
+  vault-cert:
+    address: "https://localhost:8208"
+    cert_path: "./sandbox/files/vault.crt"
+    auth_method: "cert"
+    namespace: ""
+    auth_config:
+      cert_name: "vui-sandbox-user"
+      cert_crt_path: "./sandbox/vol/certs/client.crt"
+      cert_key_path: "./sandbox/vol/certs/client.key"
+
   vault-azure-todo:
     address: "http://localhost:8201"
     auth_method: "azure"

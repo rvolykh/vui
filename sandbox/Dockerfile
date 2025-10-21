@@ -1,7 +1,7 @@
 FROM hashicorp/vault:1.20
 
 RUN apk update && \
-    apk add --no-cache aws-cli kubectl
+    apk add --no-cache aws-cli kubectl openssl
 
 COPY scripts/ /vui/
 COPY cfg/aws /root/.aws/config

@@ -331,34 +331,37 @@ func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.
 		return fmt.Errorf("cert_name is required for cert authentication")
 	}
 
-	certPath := profile.AuthConfig.CertPath
+	certPath := profile.AuthConfig.CertCrtPath
 	if certPath == "" {
 		return fmt.Errorf("cert_path is required for cert authentication")
 	}
 
-	keyPath := profile.AuthConfig.KeyPath
+	keyPath := profile.AuthConfig.CertKeyPath
 	if keyPath == "" {
 		return fmt.Errorf("key_path is required for cert authentication")
 	}
 
-	// Read certificate and key files (Note: This is a simplified implementation)
-	// In a real implementation, you would need to configure TLS properly
-	_, err := os.ReadFile(certPath)
-	if err != nil {
-		return fmt.Errorf("failed to read certificate file: %w", err)
+	cfg := api.DefaultConfig()
+	cfg.Address = client.Address()
+
+	if err := cfg.ConfigureTLS(&api.TLSConfig{
+		CACert:     profile.CertPath,
+		ClientCert: certPath,
+		ClientKey:  keyPath,
+	}); err != nil {
+		return fmt.Errorf("failed to configure client TLS: %w", err)
 	}
 
-	_, err = os.ReadFile(keyPath)
+	certClient, err := api.NewClient(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to read key file: %w", err)
+		return fmt.Errorf("failed to create new client: %w", err)
 	}
 
-	// Set client certificate (Note: This is a simplified implementation)
-	// In a real implementation, you would need to configure TLS properly
-	// For now, we'll just validate that the files exist
+	if ns := client.Namespace(); ns != "" {
+		certClient.SetNamespace(ns)
+	}
 
-	// Authenticate with cert
-	secret, err := client.Logical().Write("auth/cert/login", map[string]interface{}{
+	secret, err := certClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": certName,
 	})
 	if err != nil {
@@ -549,13 +552,13 @@ func (am *AuthManager) validateCertConfig(profile *config.VaultProfile) error {
 	if certName := profile.AuthConfig.CertName; certName == "" {
 		return fmt.Errorf("cert_name is required for cert authentication")
 	}
-	certPath := profile.AuthConfig.CertPath
+	certPath := profile.AuthConfig.CertCrtPath
 	if certPath == "" {
-		return fmt.Errorf("cert_path is required for cert authentication")
+		return fmt.Errorf("cert_crt_path is required for cert authentication")
 	}
-	keyPath := profile.AuthConfig.KeyPath
+	keyPath := profile.AuthConfig.CertKeyPath
 	if keyPath == "" {
-		return fmt.Errorf("key_path is required for cert authentication")
+		return fmt.Errorf("cert_key_path is required for cert authentication")
 	}
 
 	// Check if files exist
