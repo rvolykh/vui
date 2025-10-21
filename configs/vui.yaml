@@ -61,6 +61,14 @@ vaults:
       jwt_role: "vui-jwt-role"
       jwt: "${JWT}"
 
+  vault-userpass:
+    address: "http://localhost:8200"
+    auth_method: "userpass"
+    namespace: ""
+    auth_config:
+      username: "${USERPASS_USERNAME}"
+      password: "${USERPASS_PASSWORD}"
+
   vault-azure-todo:
     address: "http://localhost:8201"
     auth_method: "azure"

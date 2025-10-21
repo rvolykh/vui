@@ -110,6 +110,9 @@ dev-run: build
 			-d 'password=vui' \
 			-d 'grant_type=password' \
 			-d 'scope=email profile' | jq -r '.access_token') && \
+	echo "Export UserPass credentials" && \
+		export USERPASS_USERNAME=vui && \
+		export USERPASS_PASSWORD=vui && \
 	echo "OIDC Credentials" && \
 	    echo " - Username: vui" && \
 		echo " - Password: vui" && \
