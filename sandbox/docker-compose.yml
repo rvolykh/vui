@@ -119,3 +119,17 @@ services:
       - oidc
     entrypoint: ["/vui/init_vault_oidc.sh"]
     restart: "on-failure"
+
+  init_vault_jwt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vui/sandbox:init
+    pull_policy: never
+    volumes:
+      - ./vol/init_vault_jwt:/status/vault_jwt
+    depends_on:
+      - vault
+      - oidc
+    entrypoint: ["/vui/init_vault_jwt.sh"]
+    restart: "on-failure"

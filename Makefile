@@ -101,6 +101,15 @@ dev-run: build
 		export VAULT_TOKEN=vui-sandbox-token && \
 	echo "Use kind context" && \
 		kubectl config use-context kind-vui-sandbox && \
+	echo "Export JWT" && \
+		export JWT=$$(curl -X POST 'http://oidc:8080/realms/vui-sandbox-realm/protocol/openid-connect/token' \
+			-H 'Content-Type: application/x-www-form-urlencoded' \
+			-d 'client_id=vui-sandbox-oidc-client-id' \
+			-d 'client_secret=vui-sandbox-oidc-client-secret' \
+			-d 'username=vui' \
+			-d 'password=vui' \
+			-d 'grant_type=password' \
+			-d 'scope=email profile' | jq -r '.access_token') && \
 	echo "OIDC Credentials" && \
 	    echo " - Username: vui" && \
 		echo " - Password: vui" && \

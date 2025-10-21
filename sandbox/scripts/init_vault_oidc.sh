@@ -8,7 +8,7 @@ else
     touch /status/vault_oidc/1
 fi
 
-# Enable LDAP authentication
+# Enable OIDC authentication
 if [ -f /status/vault_oidc/2 ]; then
     echo "Skipped vault enable oidc"
 else
@@ -42,7 +42,7 @@ else
     touch /status/vault_oidc/4
 fi
 
-# Write LDAP configuration
+# Write OIDC configuration
 if [ -f /status/vault_oidc/5 ]; then
     echo "Skipped vault configure oidc"
 else
