@@ -202,32 +202,29 @@ vaults:
 ### Running Tests
 
 ```bash
-# Run all tests
-make test
-
-# Run tests with coverage
-make coverage
-
-# Run specific package tests
-go test ./internal/config/...
+make test     # Run tests
+make coverage # Run tests with coverage
 ```
 
 ### Code Quality
 
 ```bash
-# Format code
-make fmt
-
-# Run linter
-make vet
-
-# Run comprehensive linter (requires golangci-lint)
-make lint
+make fmt  # Format source code
+make vet  # Examine source code
 ```
 
 ## Sandbox
 
 Local playground environment with different vault auths / profiles.
+
+```bash
+make sbx-build  # Build sandbox environment init image
+make up         # Create sandbox environment, e.g. make sbx-up, make sbx-up vault
+make sbx-logs   # Show logs for sandbox environment, e.g. make sbx-logs, make sbx-logs vault
+make sbx-ps     # Show sandbox services
+make sbx-run    # Run vui in sandbox environment
+make sbx-down   # Destroy sandbox environment
+```
 
 Refer to [Sandbox](./sandbox/README.md) for more details.
 

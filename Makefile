@@ -1,152 +1,104 @@
-# VUI Makefile
+SHELL := /bin/bash
+.DEFAULT_GOAL := help
 
 # Variables
-BINARY_NAME=vui
 VERSION?=dev
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.gitCommit=$(GIT_COMMIT)"
 
-# Go parameters
-GOCMD=go
-GOBUILD=$(GOCMD) build
-GOCLEAN=$(GOCMD) clean
-GOTEST=$(GOCMD) test
-GOGET=$(GOCMD) get
-GOMOD=$(GOCMD) mod
+# Allow to pass args to targets
+cmd := $(firstword $(MAKECMDGOALS))
+args := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
+%::
+	@ true
+# (c) https://askubuntu.com/a/1448109
 
-# Build targets
-.PHONY: all build clean test deps fmt vet lint install run help
+##@ Build targets
 
-all: clean fmt vet test build
+deps: ## Download and tidy dependencies
+	@ go mod download
+	@ go mod tidy
+.PHONY: deps
 
-# Build the application
-build:
-	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) ./cmd/vui
+fmt: ## Format source code
+	@ go fmt ./...
+.PHONY: fmt
 
-# Build for multiple platforms
-build-all: build-linux build-darwin build-windows
+vet: ## Examine source code
+	@ go vet ./...
+.PHONY: vet
 
-build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-linux-amd64 ./cmd/vui
-	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-linux-arm64 ./cmd/vui
+build: ## Build the application
+	@ go build $(LDFLAGS) -o vui ./cmd/vui
+.PHONY: build
 
-build-darwin:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-amd64 ./cmd/vui
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-arm64 ./cmd/vui
+##@ Test targets
 
-build-windows:
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-windows-amd64.exe ./cmd/vui
+test: ## Run tests, e.g. make test, make test TestCoalesce
+	@ go test -v $(if $(args), -run '$(args)') ./...
+.PHONY: test
 
-# Clean build artifacts
-clean:
-	$(GOCLEAN)
-	rm -f $(BINARY_NAME) $(BINARY_NAME)-*
-	rm -f *.log
-	rm -f coverage.*
-	rm -rf sandbox/vol
+coverage: ## Run tests with coverage
+	@ go test -coverprofile=coverage.out ./...
+	@ go tool cover -html=coverage.out -o coverage.html
+.PHONY: coverage
 
-# Run tests
-test:
-	$(GOTEST) -v ./...
+##@ Sandbox targets
 
-# Run tests with coverage
-coverage:
-	$(GOTEST) -coverprofile=coverage.out ./...
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
+sbx-build: ## Build sandbox init image(s)
+	@ $(MAKE) -C sandbox build
+.PHONY: sbx-build
 
-# Download dependencies
-deps:
-	$(GOMOD) download
-	$(GOMOD) tidy
+sbx-up: ## Create sandbox, e.g. make sbx-up, make sbx-up vault
+	@ $(MAKE) -C sandbox up $(args)
+.PHONY: sbx-up
 
-# Format code
-fmt:
-	$(GOCMD) fmt ./...
+sbx-logs: ## Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
+	@ $(MAKE) -C sandbox logs $(args)
+.PHONY: sbx-logs
 
-# Run go vet
-vet:
-	$(GOCMD) vet ./...
+sbx-ps: ## Show sandbox services
+	@ $(MAKE) -C sandbox ps
+.PHONY: sbx-ps
 
-# Run golangci-lint (if installed)
-lint:
-	golangci-lint run
+sbx-run: build
+sbx-run: ## Run vui in sandbox
+	@ $(MAKE) -C sandbox env
+	@ echo "# Run the application"
+	@ eval $$(cat ./sandbox/.env) && ./vui
+.PHONY: sbx-run
 
-dev-build:
-	cd sandbox && docker-compose build
+sbx-down: ## Destroy sandbox
+	@ $(MAKE) -C sandbox down
+	@ $(MAKE) -C sandbox clean
+.PHONY: sbx-down
 
-dev-up:
-	mkdir -p sandbox/vol/kind/pki sandbox/vol/kind/kube
-	kind create cluster --config=./sandbox/kind.yml || true
-	kubectl cluster-info --context kind-vui-sandbox
-	kind export kubeconfig --name vui-sandbox --kubeconfig ./sandbox/vol/kind/kube/config
-	kubectl --context kind-vui-sandbox apply -f sandbox/files/kubernetes.yaml
-	cd sandbox && docker-compose up -d
+##@ Other targets
 
-dev-logs:
-	cd sandbox && docker-compose logs -f
+clean: ## Clean temporary files
+	@ go clean
+	@ rm -f ./vui
+	@ rm -f *.log
+	@ rm -f coverage.*
+.PHONY: clean
 
-dev-ps:
-	cd sandbox && docker-compose ps -a
-
-# Run VUI with necessary environment variables for Sandbox environment
-dev-run: build
-	echo "Export VaultAWS environment variables" && \
-		export AWS_CONFIG_FILE=./sandbox/cfg/aws && \
-		eval $$(aws configure export-credentials --profile vui-iam-role --format env) && \
-	echo "Export Vault LDAP environment variables" && \
-		export LDAP_USERNAME=testuser && \
-		export LDAP_PASSWORD=testpassword && \
-	echo "Export Vault Token environment variables" && \
-		export VAULT_TOKEN=vui-sandbox-token && \
-	echo "Use kind context" && \
-		kubectl config use-context kind-vui-sandbox && \
-	echo "Export JWT" && \
-		export JWT=$$(curl -X POST 'http://oidc:8080/realms/vui-sandbox-realm/protocol/openid-connect/token' \
-			-H 'Content-Type: application/x-www-form-urlencoded' \
-			-d 'client_id=vui-sandbox-oidc-client-id' \
-			-d 'client_secret=vui-sandbox-oidc-client-secret' \
-			-d 'username=vui' \
-			-d 'password=vui' \
-			-d 'grant_type=password' \
-			-d 'scope=email profile' | jq -r '.access_token') && \
-	echo "Export UserPass credentials" && \
-		export USERPASS_USERNAME=vui && \
-		export USERPASS_PASSWORD=vui && \
-	echo "OIDC Credentials" && \
-	    echo " - Username: vui" && \
-		echo " - Password: vui" && \
-        sleep 1 && \
-	echo "Run the application" && \
-		./$(BINARY_NAME)
-
-dev-down: clean
-	kind delete cluster --name vui-sandbox
-	cd sandbox && docker-compose down
-
-# Create release packages
-release: clean build-all
-	mkdir -p releases
-	tar -czf releases/$(BINARY_NAME)-$(VERSION)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
-	tar -czf releases/$(BINARY_NAME)-$(VERSION)-linux-arm64.tar.gz $(BINARY_NAME)-linux-arm64
-	tar -czf releases/$(BINARY_NAME)-$(VERSION)-darwin-amd64.tar.gz $(BINARY_NAME)-darwin-amd64
-	tar -czf releases/$(BINARY_NAME)-$(VERSION)-darwin-arm64.tar.gz $(BINARY_NAME)-darwin-arm64
-	zip releases/$(BINARY_NAME)-$(VERSION)-windows-amd64.zip $(BINARY_NAME)-windows-amd64.exe
-
-# Show help
-help:
-	@echo "Available targets:"
-	@echo "  build        - Build the application"
-	@echo "  build-all    - Build for all platforms"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  test         - Run tests"
-	@echo "  coverage     - Run tests with coverage"
-	@echo "  deps         - Download and tidy dependencies"
-	@echo "  fmt          - Format code"
-	@echo "  vet          - Run go vet"
-	@echo "  lint         - Run golangci-lint"
-	@echo "  run          - Build and run the application"
-	@echo "  dev-up       - Setup test environment"
-	@echo "  dev-down     - Shutdown test environment"
-	@echo "  release      - Create release packages"
-	@echo "  help         - Show this help"
+help: ## Show help message
+	@awk 'BEGIN { \
+		FS = ":.*##"; \
+		printf "Usage:\n  make \033[36m<target>\033[0m\n" \
+		} \
+		/^[a-zA-Z0-9_-]+:.*?##/ { \
+			desc = $$2; \
+			if (match(desc, / e\.g\. /)) { \
+				before = substr(desc, 1, RSTART - 1); \
+				after = substr(desc, RSTART); \
+				printf "  \033[36m%-20s\033[0m %s\033[32m%s\033[0m\n", $$1, before, after \
+			} else { \
+				printf "  \033[36m%-20s\033[0m %s\n", $$1, desc \
+			} \
+		} \
+		/^##@/ { \
+			printf "\n\033[1m%s\033[0m\n", substr($$0, 5) \
+		}' $(MAKEFILE_LIST)
+.PHONY: help

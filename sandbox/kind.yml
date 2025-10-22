@@ -6,5 +6,5 @@ networking:
 nodes:
 - role: control-plane
   extraMounts:
-  - hostPath: ./sandbox/vol/kind/pki
+  - hostPath: ./vol/kind/pki
     containerPath: /etc/kubernetes/pki

@@ -213,20 +213,22 @@ Notice the `${VARIABLE_NAME}` syntax in the configuration. VUI automatically res
 
 ---
 
-## Makefile Integration: `dev-run` Target
+## Makefile Integration: `env` Target
 
-The `make dev-run` target orchestrates the entire sandbox workflow:
+The `make env` target orchestrates the entire sandbox vui configuration:
 
 ```bash
-make dev-run
+make env
 ```
 
 ### What It Does
 
+It prepares all required environment variables for [VUI profiles](../configs/vui.yaml).
+
 ```makefile
-dev-run: build
+env:
     # 1. Export AWS credentials from LocalStack
-    export AWS_CONFIG_FILE=./sandbox/cfg/aws && \
+    export AWS_CONFIG_FILE=./cfg/aws && \
     eval $(aws configure export-credentials --profile vui-iam-role --format env)
     
     # 2. Export LDAP credentials
@@ -257,10 +259,10 @@ dev-run: build
     echo "OIDC Credentials"
     echo " - Username: vui"
     echo " - Password: vui"
-    
-    # 8. Run VUI with all environment variables set
-    ./vui
 ```
+
+The target is integrated with the Makefile in repo root - `make sbx-run`,
+which will eval all generated env variables and run VUI.
 
 ### Environment Setup Breakdown
 
@@ -293,13 +295,13 @@ dev-run: build
 echo "127.0.0.1    oidc" | sudo tee -a /etc/hosts
 
 # 2. Build the sandbox init image
-make dev-build
+make build
 
 # 3. Start the sandbox environment (creates kind cluster + docker services)
-make dev-up
+make up
 
 # 4. Wait for initialization (all init containers should exit with 0)
-make dev-ps
+make ps
 
 # Expected output:
 #   init_vault_ldap        Exited (0)
@@ -316,7 +318,7 @@ make dev-ps
 
 ```bash
 # Run VUI with all sandbox profiles configured
-make dev-run
+make sbx-run  # should be executed from repo root
 ```
 
 Inside VUI:
@@ -329,29 +331,25 @@ Inside VUI:
 
 ```bash
 # View logs from all services
-make dev-logs
+make logs
 
 # Check specific service
-cd sandbox && docker-compose logs vault
-cd sandbox && docker-compose logs oidc
+make logs vault
+make logs localstack
 
 # Restart a specific service
-cd sandbox && docker-compose restart vault
+docker-compose restart vault
 
 # Full cleanup and restart
-make dev-down
+make down
 make clean
-make dev-up
+make up
 ```
 
 ### Cleanup
 
 ```bash
-# Stop sandbox but keep volumes (fast restart)
-cd sandbox && docker-compose down
-
-# Full cleanup (deletes kind cluster and all volumes)
-make dev-down
+make down
 ```
 
 ---
@@ -394,7 +392,7 @@ sandbox/
 
 ### Example: Testing LDAP Auth
 
-1. Start VUI: `make dev-run`
+1. Start VUI: `make run` / `make sbx-run`
 2. Press `Tab` to open profiles table
 3. Navigate to `vault-ldap` and press `Enter`
 4. VUI authenticates using `testuser` / `testpassword` from environment
@@ -402,7 +400,7 @@ sandbox/
 
 ### Example: Testing OIDC Auth
 
-1. Start VUI: `make dev-run`
+1. Start VUI from repo root: `make sbx-run`
 2. Press `Tab` to open profiles table
 3. Navigate to `vault-oidc` and press `Enter`
 4. Browser opens to Keycloak login page
@@ -411,7 +409,7 @@ sandbox/
 
 ### Example: Testing Kubernetes Auth
 
-1. Start VUI: `make dev-run`
+1. Start VUI from repo root: `make sbx-run`
 2. Press `Tab` to open profiles table
 3. Navigate to `vault-k8s` and press `Enter`
 4. VUI uses service account token from kind cluster
@@ -466,14 +464,14 @@ To add a new authentication method:
 
 ## FAQ
 
-**Q: Why does `make dev-run` fail with "connection refused"?**  
-A: Ensure all init containers have completed successfully (`make dev-ps`). If any failed, check logs (`make dev-logs`) and restart.
+**Q: Why does `make sbx-run` fail with "connection refused"?**  
+A: Ensure all init containers have completed successfully (`make sbx-ps`). If any failed, check logs (`make sbx-logs`) and restart.
 
 **Q: Can I run VUI against only one auth method?**  
 A: Yes! Comment out unwanted profiles in `configs/vui.yaml` or start only specific services in docker-compose.
 
 **Q: How do I reset the environment?**  
-A: Run `make dev-down` then `make clean` to remove all generated files, then `make dev-up` to start fresh.
+A: Run `make down` then `make clean` to remove all generated files, then `make up` to start fresh.
 
 **Q: Can I use this sandbox for production?**  
 A: **NO!** This is a development environment with hardcoded credentials and insecure settings. Never expose these services to the internet.
