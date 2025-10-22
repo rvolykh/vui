@@ -229,37 +229,7 @@ make lint
 
 Local playground environment with different vault auths / profiles.
 
-### Requirements
-
-- [kind](https://kind.sigs.k8s.io/)
-- [docker](https://www.docker.com/) / [podman](https://podman.io/)
-- `127.0.0.1    oidc` record on `/etc/hosts`
-
-### Commands
-
-```bash
-make dev-build
-      # Build Sandbox environment init image
-
-make dev-up
-      # Start Sandbox environment
-
-make dev-ps
-      # Check Sabdbox environment status
-      # All `init_` containers has to have status "Exited (0)"
-
-make dev-logs
-      # Check logs of Sandbox environment
-
-make dev-run
-      # Run VUI with necessary environment variables
-
-make dev-down
-      # Stop Sandbox environment
-
-make clean
-      # Cleanup temporary files, required when Sandbox should be re-created
-```
+Refer to [Sandbox](./sandbox/README.md) for more details.
 
 ## Acknowledgments
 
