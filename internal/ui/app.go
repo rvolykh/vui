@@ -28,7 +28,7 @@ type App struct {
 // NewApp creates a new UI application
 func NewApp(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *App {
 	// Initialize theme
-	common.InitializeTheme(config.App.Theme)
+	common.InitializeTheme(config.UI.Theme)
 
 	uiApp := tview.NewApplication()
 

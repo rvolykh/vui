@@ -1,7 +1,9 @@
 app:
-  theme: "default"
+  log_level: "info"
+  log_file: "vui.log"
 
 ui:
+  theme: "default"
   show_hidden_secrets: false
 
 vaults:

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/rvolykh/vui/internal/utils"
 	"github.com/spf13/viper"
 )
 
@@ -17,12 +18,14 @@ type Config struct {
 
 // AppConfig contains general application settings
 type AppConfig struct {
-	Theme string `mapstructure:"theme"`
+	LogLevel string `mapstructure:"log_level"`
+	LogFile  string `mapstructure:"log_file"`
 }
 
 // UIConfig contains user interface settings
 type UIConfig struct {
-	ShowHiddenSecrets bool `mapstructure:"show_hidden_secrets"`
+	Theme             string `mapstructure:"theme"`
+	ShowHiddenSecrets bool   `mapstructure:"show_hidden_secrets"`
 }
 
 // VaultProfile represents a vault connection profile
@@ -103,8 +106,8 @@ func Load() (*Config, error) {
 		}
 
 		// Create config file
-		os.MkdirAll(filepath.Join(os.Getenv("HOME"), ".vui"), 0755)
-		configFile := filepath.Join(os.Getenv("HOME"), ".vui", "vui.yaml")
+		os.MkdirAll(filepath.Join(utils.HomeDir(), ".vui"), 0755)
+		configFile := filepath.Join(utils.HomeDir(), ".vui", "vui.yaml")
 		if _, err := os.Stat(configFile); os.IsNotExist(err) {
 			viper.WriteConfigAs(configFile)
 		}
@@ -128,9 +131,11 @@ func Load() (*Config, error) {
 // setDefaults sets default configuration values
 func setDefaults() {
 	// App defaults
-	viper.SetDefault("app.theme", "default")
+	viper.SetDefault("app.log_level", "info")
+	viper.SetDefault("app.log_file", filepath.Join(utils.HomeDir(), ".vui", "vui.log"))
 
 	// UI defaults
+	viper.SetDefault("ui.theme", "default")
 	viper.SetDefault("ui.show_hidden_secrets", false)
 
 	// Vaults defaults
@@ -142,7 +147,7 @@ func setDefaults() {
 
 // Save saves the configuration to a file
 func (c *Config) Save() error {
-	configDir := filepath.Join(os.Getenv("HOME"), ".vui")
+	configDir := filepath.Join(utils.HomeDir(), ".vui")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}

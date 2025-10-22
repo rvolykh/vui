@@ -21,25 +21,27 @@ type App struct {
 
 // New creates a new application instance
 func New() (*App, error) {
-	logger := logrus.New()
-	logger.SetLevel(logrus.InfoLevel)
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp: true,
-	})
-
-	// Configure logger to write to file instead of stdout/stderr
-	// This prevents log output from interfering with the TUI
-	logFile, err := os.OpenFile("vui.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open log file: %w", err)
-	}
-	logger.SetOutput(logFile)
-
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load configuration: %w", err)
 	}
+
+	// Initialize logger
+	logger := logrus.New()
+	logLevel, err := logrus.ParseLevel(cfg.App.LogLevel)
+	if err != nil {
+		logLevel = logrus.InfoLevel
+	}
+	logger.SetLevel(logLevel)
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+	logFile, err := os.OpenFile(cfg.App.LogFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open log file: %w", err)
+	}
+	logger.SetOutput(logFile)
 
 	// Initialize vault manager
 	vaultManager, err := vault.NewManager(cfg, logger)
@@ -73,19 +75,4 @@ func (a *App) Run() error {
 
 	// Run the UI application
 	return uiApp.Run()
-}
-
-// GetConfig returns the application configuration
-func (a *App) GetConfig() *config.Config {
-	return a.config
-}
-
-// GetVaultManager returns the vault manager
-func (a *App) GetVaultManager() *vault.Manager {
-	return a.vault
-}
-
-// GetLogger returns the application logger
-func (a *App) GetLogger() *logrus.Logger {
-	return a.logger
 }

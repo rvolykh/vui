@@ -14,14 +14,16 @@ func TestLoad(t *testing.T) {
 	require.NotNil(t, config)
 
 	// Verify default values
-	assert.Equal(t, "dark", config.App.Theme)
+	assert.Equal(t, "info", config.App.LogLevel)
+	assert.Equal(t, false, config.UI.ShowHiddenSecrets)
+	assert.Equal(t, "default", config.UI.Theme)
 	assert.Equal(t, "http://localhost:8200", config.Vaults["local"].Address)
 	assert.Equal(t, "token", config.Vaults["local"].AuthMethod)
 }
 
 func TestConfigSave(t *testing.T) {
 	config := &Config{
-		App: AppConfig{
+		UI: UIConfig{
 			Theme: "light",
 		},
 		Vaults: map[string]VaultProfile{
