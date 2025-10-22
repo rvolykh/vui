@@ -17,10 +17,12 @@ type Config struct {
 
 // AppConfig contains general application settings
 type AppConfig struct {
-	Theme            string `mapstructure:"theme"`
-	RefreshInterval  int    `mapstructure:"refresh_interval"`
-	MaxSecretSize    int    `mapstructure:"max_secret_size"`
-	ClipboardTimeout int    `mapstructure:"clipboard_timeout"`
+	Theme string `mapstructure:"theme"`
+}
+
+// UIConfig contains user interface settings
+type UIConfig struct {
+	ShowHiddenSecrets bool `mapstructure:"show_hidden_secrets"`
 }
 
 // VaultProfile represents a vault connection profile
@@ -79,14 +81,6 @@ type AuthConfig struct {
 	CertKeyPath string `mapstructure:"cert_key_path,omitempty"`
 }
 
-// UIConfig contains user interface settings
-type UIConfig struct {
-	ShowHiddenSecrets bool `mapstructure:"show_hidden_secrets"`
-	ConfirmDeletions  bool `mapstructure:"confirm_deletions"`
-	AutoRefresh       bool `mapstructure:"auto_refresh"`
-	TreeWidth         int  `mapstructure:"tree_width"`
-}
-
 // Load loads the configuration from files and environment variables
 func Load() (*Config, error) {
 	viper.SetConfigName("vui.yaml")
@@ -134,16 +128,10 @@ func Load() (*Config, error) {
 // setDefaults sets default configuration values
 func setDefaults() {
 	// App defaults
-	viper.SetDefault("app.theme", "dark")
-	viper.SetDefault("app.refresh_interval", 30)
-	viper.SetDefault("app.max_secret_size", 10240)
-	viper.SetDefault("app.clipboard_timeout", 5)
+	viper.SetDefault("app.theme", "default")
 
 	// UI defaults
 	viper.SetDefault("ui.show_hidden_secrets", false)
-	viper.SetDefault("ui.confirm_deletions", true)
-	viper.SetDefault("ui.auto_refresh", true)
-	viper.SetDefault("ui.tree_width", 40)
 
 	// Vaults defaults
 	viper.SetDefault("vaults.local.address", "http://localhost:8200")

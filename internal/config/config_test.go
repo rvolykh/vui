@@ -15,7 +15,6 @@ func TestLoad(t *testing.T) {
 
 	// Verify default values
 	assert.Equal(t, "dark", config.App.Theme)
-	assert.Equal(t, 30, config.App.RefreshInterval)
 	assert.Equal(t, "http://localhost:8200", config.Vaults["local"].Address)
 	assert.Equal(t, "token", config.Vaults["local"].AuthMethod)
 }

@@ -27,7 +27,7 @@ func NewSecretsValue(config *config.Config, vaultMgr *vault.Manager, logger *log
 	return &SecretsValue{
 		config:   config,
 		vaultMgr: vaultMgr,
-		isMasked: true, // Values are masked by default
+		isMasked: !config.UI.ShowHiddenSecrets,
 		logger:   logger,
 	}
 }
@@ -56,7 +56,7 @@ func (vp *SecretsValue) Initialize() error {
 func (vp *SecretsValue) ShowSecret(secret *vault.SecretNode) {
 	vp.currentSecret = secret
 	vp.currentKey = ""
-	vp.isMasked = true // Reset to masked when showing a new secret
+	vp.isMasked = !vp.config.UI.ShowHiddenSecrets // Reset to masked when showing a new secret
 	vp.displaySecretData(secret)
 }
 
@@ -64,7 +64,7 @@ func (vp *SecretsValue) ShowSecret(secret *vault.SecretNode) {
 func (vp *SecretsValue) ShowKey(secret *vault.SecretNode, key string) {
 	vp.currentSecret = secret
 	vp.currentKey = key
-	vp.isMasked = true // Reset to masked when showing a new key
+	vp.isMasked = !vp.config.UI.ShowHiddenSecrets // Reset to masked when showing a new key
 	vp.displayKeyValue(secret, key)
 }
 

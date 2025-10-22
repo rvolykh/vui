@@ -30,7 +30,7 @@ func TestInitializeTheme(t *testing.T) {
 	origBorder := tview.Styles.BorderColor
 
 	// Initialize theme
-	InitializeTheme()
+	InitializeTheme("default")
 
 	// Verify theme was applied
 	assert.Equal(t, tcell.ColorBlack, tview.Styles.PrimitiveBackgroundColor)

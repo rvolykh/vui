@@ -38,8 +38,14 @@ func DefaultTheme() ThemeColors {
 }
 
 // InitializeTheme applies the theme colors to tview
-func InitializeTheme() {
-	theme := DefaultTheme()
+func InitializeTheme(themeName string) {
+	var theme ThemeColors
+	if themeName == "todo" {
+		theme = ThemeColors{}
+	} else {
+		theme = DefaultTheme()
+	}
+
 	tview.Styles.PrimitiveBackgroundColor = theme.Background
 	tview.Styles.ContrastBackgroundColor = theme.ContrastBackground
 	tview.Styles.MoreContrastBackgroundColor = theme.MoreContrastBackground
