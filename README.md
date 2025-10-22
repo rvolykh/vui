@@ -77,14 +77,31 @@ When no vault servers are connected, you'll see:
 
 ### Available Make Targets
 
-```bash
-make build        # Build the application
-make test         # Run tests
-make clean        # Clean build artifacts
-make deps         # Download dependencies
-make fmt          # Format code
-make vet          # Run go vet
-make help         # Show all available targets
+```text
+Usage:
+  make <target>
+
+Build targets
+  deps                  Download and tidy dependencies
+  fmt                   Format source code
+  vet                   Examine source code
+  build                 Build the application
+
+Test targets
+  test                  Run tests, e.g. make test, make test TestCoalesce
+  coverage              Run tests with coverage
+
+Sandbox targets
+  sbx-build             Build sandbox init image(s)
+  sbx-up                Create sandbox, e.g. make sbx-up, make sbx-up vault
+  sbx-logs              Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
+  sbx-ps                Show sandbox services
+  sbx-run               Run vui in sandbox
+  sbx-down              Destroy sandbox
+
+Other targets
+  clean                 Clean temporary files
+  help                  Show help message
 ```
 
 ## Configuration
@@ -218,12 +235,12 @@ make vet  # Examine source code
 Local playground environment with different vault auths / profiles.
 
 ```bash
-make sbx-build  # Build sandbox environment init image
-make up         # Create sandbox environment, e.g. make sbx-up, make sbx-up vault
-make sbx-logs   # Show logs for sandbox environment, e.g. make sbx-logs, make sbx-logs vault
+make sbx-build  # Build sandbox init image(s)
+make sbx-up     # Create sandbox, e.g. make sbx-up, make sbx-up vault
+make sbx-logs   # Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
 make sbx-ps     # Show sandbox services
-make sbx-run    # Run vui in sandbox environment
-make sbx-down   # Destroy sandbox environment
+make sbx-run    # Run vui in sandbox
+make sbx-down   # Destroy sandbox
 ```
 
 Refer to [Sandbox](./sandbox/README.md) for more details.
