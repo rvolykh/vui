@@ -2,6 +2,7 @@ package forms
 
 import (
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 
@@ -53,9 +54,7 @@ func (fb *KeyValueFormBuilder) Build() tview.Primitive {
 	// Initialize state
 	if fb.config.InitialData != nil {
 		fb.keyValuePairs = make(map[string]string)
-		for k, v := range fb.config.InitialData {
-			fb.keyValuePairs[k] = v
-		}
+		maps.Copy(fb.keyValuePairs, fb.config.InitialData)
 	}
 
 	// Create container
@@ -74,11 +73,14 @@ func (fb *KeyValueFormBuilder) SetPath(path string) {
 
 // rebuildForm rebuilds the form with current state
 func (fb *KeyValueFormBuilder) rebuildForm() {
+	fb.logger.Info("rebuildForm: Starting")
 	form := tview.NewForm()
 	fb.currentForm = form
+	fb.logger.Info("rebuildForm: Created new form")
 
 	// Secret path field
 	if fb.config.PathLabel != "" {
+		fb.logger.Infof("rebuildForm: Adding path field, label='%s'", fb.config.PathLabel)
 		pathField := tview.NewInputField().
 			SetLabel(fb.config.PathLabel).
 			SetText(fb.secretPath).
@@ -94,10 +96,12 @@ func (fb *KeyValueFormBuilder) rebuildForm() {
 		}
 
 		form.AddFormItem(pathField)
+		fb.logger.Info("rebuildForm: Path field added")
 	}
 
 	// Show existing key-value pairs
 	if len(fb.keyValuePairs) > 0 {
+		fb.logger.Infof("rebuildForm: Processing %d existing key-value pairs", len(fb.keyValuePairs))
 		pairText := fmt.Sprintf("Key-Value Pairs (%d):", len(fb.keyValuePairs))
 		form.AddTextView(pairText, "", 0, 1, false, false)
 
@@ -107,33 +111,50 @@ func (fb *KeyValueFormBuilder) rebuildForm() {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
+		fb.logger.Infof("rebuildForm: Sorted keys: %v", keys)
 
-		for _, k := range keys {
+		for idx, k := range keys {
+			fb.logger.Infof("rebuildForm: Processing pair %d/%d: key='%s'", idx+1, len(keys), k)
 			v := fb.keyValuePairs[k]
-			displayValue := v
-			if len(displayValue) > 40 {
-				displayValue = displayValue[:37] + "..."
-			}
 
 			if fb.config.ShowDeleteKeys {
+				fb.logger.Infof("rebuildForm: Adding delete button for key='%s'", k)
 				// For edit mode: show as input field with delete button
-				form.AddInputField(k, v, 50, nil, func(text string) {
-					fb.keyValuePairs[k] = text
-				})
-				form.AddButton("Delete "+k, fb.createDeleteKeyHandler(k))
+				// Create a copy of k for the closure
+				key := k
+
+				valueField := tview.NewTextArea().SetLabel(key).SetText(v, true)
+				form.AddFormItem(valueField)
+				form.AddButton("Delete "+key, fb.createDeleteKeyHandler(key))
 			} else {
+				displayValue := strings.ReplaceAll(v, "\n", "\\n")
+				if len(displayValue) > 40 {
+					displayValue = displayValue[:37] + "..."
+				}
+
+				fb.logger.Infof("rebuildForm: Adding read-only display for key='%s'", k)
 				// For create mode: show as read-only text
 				form.AddTextView("  • "+k, displayValue, 0, 1, false, false)
 			}
 		}
+		fb.logger.Info("rebuildForm: Finished processing existing pairs")
 	}
 
 	// New key-value pair section
+	fb.logger.Info("rebuildForm: Adding new pair section")
 	form.AddTextView("New Pair:", "", 0, 1, false, false)
-	form.AddInputField("Key", "", 30, nil, nil).
-		AddInputField("Value", "", 50, nil, nil)
+
+	// Add Key field
+	fb.logger.Info("rebuildForm: Adding Key field")
+	form.AddInputField("Key", "", 30, nil, nil)
+
+	// Add Value field with multiline support
+	fb.logger.Info("rebuildForm: Adding Value field (TextArea)")
+	valueField := tview.NewTextArea().SetLabel("Value").SetText("", true)
+	form.AddFormItem(valueField)
 
 	// Buttons
+	fb.logger.Info("rebuildForm: Adding buttons")
 	form.AddButton("Add Key-Value", fb.createAddKeyValueHandler()).
 		AddButton(fb.config.SaveButtonText, fb.createSaveHandler()).
 		AddButton("Cancel", func() {
@@ -147,30 +168,39 @@ func (fb *KeyValueFormBuilder) rebuildForm() {
 	if len(fb.keyValuePairs) > 0 {
 		title = fmt.Sprintf("%s [%d pairs]", title, len(fb.keyValuePairs))
 	}
+	fb.logger.Infof("rebuildForm: Setting title='%s'", title)
 	form.SetBorder(true).
 		SetTitle(title).
 		SetTitleAlign(tview.AlignLeft)
 
 	// Apply styling
+	fb.logger.Info("rebuildForm: Applying styles")
 	common.ApplyFormStyle(form)
 	common.ApplyButtonStyle(form)
 
 	// Replace the form in the container
+	fb.logger.Info("rebuildForm: Replacing form in container")
 	fb.container.Clear()
 	fb.container.AddItem(form, 0, 1, true)
+	fb.logger.Info("rebuildForm: Complete")
 }
 
 // createAddKeyValueHandler creates the handler for adding key-value pairs
 func (fb *KeyValueFormBuilder) createAddKeyValueHandler() func() {
 	return func() {
+		fb.logger.Info("Add Key-Value button clicked")
+
 		keyField, valueField := fb.findKeyValueFields()
 		if keyField == nil || valueField == nil {
 			fb.logger.Error("Could not find Key and Value fields")
 			return
 		}
+		fb.logger.Info("Found Key and Value fields")
 
+		// Trim key but preserve whitespace in value (including newlines)
 		key := strings.TrimSpace(keyField.GetText())
-		value := strings.TrimSpace(valueField.GetText())
+		value := valueField.GetText()
+		fb.logger.Infof("Retrieved key='%s', value length=%d", key, len(value))
 
 		if key == "" {
 			fb.logger.Warn("Key cannot be empty")
@@ -186,13 +216,14 @@ func (fb *KeyValueFormBuilder) createAddKeyValueHandler() func() {
 		fb.keyValuePairs[key] = value
 		fb.logger.Infof("Added key-value pair: %s", key)
 
-		// Rebuild the form
-		fb.app.QueueUpdateDraw(func() {
-			fb.rebuildForm()
-			if fb.currentForm != nil {
-				fb.app.SetFocus(fb.currentForm)
-			}
-		})
+		// Rebuild the form (no need for QueueUpdateDraw since we're already in UI thread)
+		fb.logger.Info("Starting rebuildForm")
+		fb.rebuildForm()
+		fb.logger.Info("Completed rebuildForm")
+		if fb.currentForm != nil {
+			fb.app.SetFocus(fb.currentForm)
+			fb.logger.Info("Focus set to currentForm")
+		}
 	}
 }
 
@@ -202,8 +233,9 @@ func (fb *KeyValueFormBuilder) createSaveHandler() func() {
 		// Auto-add unsaved key-value fields before saving
 		keyField, valueField := fb.findKeyValueFields()
 		if keyField != nil && valueField != nil {
+			// Trim key but preserve whitespace in value (including newlines)
 			key := strings.TrimSpace(keyField.GetText())
-			value := strings.TrimSpace(valueField.GetText())
+			value := valueField.GetText()
 
 			if key != "" && value != "" {
 				fb.keyValuePairs[key] = value
@@ -224,36 +256,48 @@ func (fb *KeyValueFormBuilder) createDeleteKeyHandler(key string) func() {
 		delete(fb.keyValuePairs, key)
 		fb.logger.Infof("Deleted key-value pair: %s", key)
 
-		// Rebuild the form
-		fb.app.QueueUpdateDraw(func() {
-			fb.rebuildForm()
-			if fb.currentForm != nil {
-				fb.app.SetFocus(fb.currentForm)
-			}
-		})
+		// Rebuild the form (no need for QueueUpdateDraw since we're already in UI thread)
+		fb.rebuildForm()
+		if fb.currentForm != nil {
+			fb.app.SetFocus(fb.currentForm)
+		}
 	}
 }
 
 // findKeyValueFields finds the Key and Value input fields in the form
-func (fb *KeyValueFormBuilder) findKeyValueFields() (*tview.InputField, *tview.InputField) {
-	var keyField, valueField *tview.InputField
+func (fb *KeyValueFormBuilder) findKeyValueFields() (*tview.InputField, *tview.TextArea) {
+	fb.logger.Info("findKeyValueFields: Starting search")
+	var keyField *tview.InputField
+	var valueField *tview.TextArea
 
 	if fb.currentForm == nil {
+		fb.logger.Error("findKeyValueFields: currentForm is nil")
 		return nil, nil
 	}
+
+	formItemCount := fb.currentForm.GetFormItemCount()
+	fb.logger.Infof("findKeyValueFields: Form has %d items", formItemCount)
 
 	// Scan backward from buttons to find the new Key and Value fields
 	for i := fb.currentForm.GetFormItemCount() - 1; i >= 0; i-- {
 		item := fb.currentForm.GetFormItem(i)
 		if inputField, ok := item.(*tview.InputField); ok {
 			label := inputField.GetLabel()
-			if label == "Value" && valueField == nil {
-				valueField = inputField
-			} else if label == "Key" && keyField == nil {
+			fb.logger.Infof("findKeyValueFields: Found InputField at index %d with label='%s'", i, label)
+			if label == "Key" && keyField == nil {
 				keyField = inputField
+				fb.logger.Info("findKeyValueFields: Found Key field")
+			}
+		} else if textArea, ok := item.(*tview.TextArea); ok {
+			label := textArea.GetLabel()
+			fb.logger.Infof("findKeyValueFields: Found TextArea at index %d with label='%s'", i, label)
+			if label == "Value" && valueField == nil {
+				valueField = textArea
+				fb.logger.Info("findKeyValueFields: Found Value field")
 			}
 		}
 	}
 
+	fb.logger.Infof("findKeyValueFields: Result - keyField=%v, valueField=%v", keyField != nil, valueField != nil)
 	return keyField, valueField
 }
