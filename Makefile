@@ -52,7 +52,7 @@ test:
 
 # Run tests with coverage
 coverage:
-	$(GOTEST) -v -coverprofile=coverage.out ./...
+	$(GOTEST) -coverprofile=coverage.out ./...
 	$(GOCMD) tool cover -html=coverage.out -o coverage.html
 
 # Download dependencies
