@@ -2,6 +2,8 @@
 
 A Console User Interface (CUI) application for HashiCorp Vault.
 
+![Demo](./docs/images/demo.gif)
+
 ## Overview
 
 VUI provides an intuitive terminal-based interface for exploring and managing secrets in HashiCorp Vault. The application supports multiple vault connections, hierarchical secret navigation, and full CRUD operations.
