@@ -15,7 +15,7 @@ import (
 	"github.com/rvolykh/vui/internal/config"
 )
 
-func AuthenticateWithOIDC(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithOIDC(client *api.Client, profile *config.VaultProfile) error {
 	role := profile.AuthConfig.OIDCRole
 	if role == "" {
 		return fmt.Errorf("oidc_role is required for OIDC authentication")

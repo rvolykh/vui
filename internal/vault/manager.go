@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/vault/auth"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +17,7 @@ type Manager struct {
 	activeVault   string
 	connectionMgr *ConnectionManager
 	secretsMgr    *SecretsManager
-	authMgr       *AuthManager
+	authMgr       *auth.AuthManager
 	mutex         sync.RWMutex
 	logger        *logrus.Logger
 }
@@ -39,7 +40,7 @@ func NewManager(cfg *config.Config, logger *logrus.Logger) (*Manager, error) {
 		config:        cfg,
 		clients:       make(map[string]*Client),
 		connectionMgr: NewConnectionManager(logger),
-		authMgr:       NewAuthManager(logger),
+		authMgr:       auth.NewAuthManager(logger),
 		logger:        logger,
 	}
 
@@ -308,55 +309,6 @@ func (m *Manager) GetConnectedConnections() []string {
 	return m.connectionMgr.GetConnectedConnections()
 }
 
-// AddVaultFromProfile adds a new vault from a profile
-func (m *Manager) AddVaultFromProfile(name string, profile *config.VaultProfile) error {
-	// Validate the profile
-	if err := m.authMgr.ValidateAuthConfig(profile); err != nil {
-		return fmt.Errorf("invalid profile: %w", err)
-	}
-	m.config.Vaults[name] = *profile
-	if err := m.config.Save(); err != nil {
-		return fmt.Errorf("failed to save profile: %w", err)
-	}
-
-	// Initialize the client
-	if err := m.initializeProfileClient(name, profile); err != nil {
-		return fmt.Errorf("failed to initialize client: %w", err)
-	}
-
-	m.logger.Infof("Added vault from profile: %s", name)
-	return nil
-}
-
-// RemoveVault removes a vault connection
-func (m *Manager) RemoveVault(name string) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if name == m.activeVault {
-		return fmt.Errorf("cannot remove active vault '%s'", name)
-	}
-
-	if _, exists := m.clients[name]; !exists {
-		return fmt.Errorf("vault '%s' not found", name)
-	}
-
-	// Remove from connection manager
-	m.connectionMgr.RemoveConnection(name)
-
-	// Remove from clients map
-	delete(m.clients, name)
-	delete(m.config.Vaults, name)
-
-	// Save profiles
-	if err := m.config.Save(); err != nil {
-		m.logger.Warnf("Failed to save config after removing '%s': %v", name, err)
-	}
-
-	m.logger.Infof("Removed vault: %s", name)
-	return nil
-}
-
 // GetVaultProfiles returns all vault profiles
 func (m *Manager) GetVaultProfiles() map[string]config.VaultProfile {
 	return m.config.Vaults
@@ -369,30 +321,6 @@ func (m *Manager) GetVaultProfile(name string) (*config.VaultProfile, error) {
 		return nil, fmt.Errorf("vault profile '%s' not found", name)
 	}
 	return &profile, nil
-}
-
-// UpdateVaultProfile updates an existing vault profile
-func (m *Manager) UpdateVaultProfile(name string, profile *config.VaultProfile) error {
-	// Validate the profile
-	if err := m.authMgr.ValidateAuthConfig(profile); err != nil {
-		return fmt.Errorf("invalid profile: %w", err)
-	}
-
-	// Update the profile
-	m.config.Vaults[name] = *profile
-	if err := m.config.Save(); err != nil {
-		return fmt.Errorf("failed to save profile: %w", err)
-	}
-
-	// Reinitialize the client if it exists
-	if _, exists := m.clients[name]; exists {
-		if err := m.initializeProfileClient(name, profile); err != nil {
-			m.logger.Warnf("Failed to reinitialize client for profile '%s': %v", name, err)
-		}
-	}
-
-	m.logger.Infof("Updated vault profile: %s", name)
-	return nil
 }
 
 // GetVaultStatus returns detailed status information for all vaults
