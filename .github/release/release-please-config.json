@@ -1,0 +1,7 @@
+{
+    "packages": {
+        "cmd/vui": {
+            "release-type": "go"
+        }
+    }
+}
