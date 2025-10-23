@@ -86,6 +86,9 @@ func (l *Layout) Initialize() error {
 	// Set value panel reference in tree panel for actions
 	l.treePanel.SetValuePanel(l.valuePanel)
 
+	// Set dialog service in tree panel for notifications
+	l.treePanel.SetDialogService(l.dialogSvc)
+
 	return nil
 }
 

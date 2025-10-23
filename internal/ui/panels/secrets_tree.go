@@ -26,6 +26,7 @@ type SecretsTree struct {
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
 	valuePanel       *SecretsValue               // Reference to value panel for mask toggle
+	dialogSvc        dialogService               // Dialog service interface for notifications
 	app              *tview.Application
 	logger           *logrus.Logger
 }
@@ -591,6 +592,11 @@ func (tp *SecretsTree) SetValuePanel(valuePanel *SecretsValue) {
 	tp.valuePanel = valuePanel
 }
 
+// SetDialogService sets the dialog service for showing notifications
+func (tp *SecretsTree) SetDialogService(dialogSvc dialogService) {
+	tp.dialogSvc = dialogSvc
+}
+
 // toggleValueMasking toggles the masking of values in the value panel
 func (tp *SecretsTree) toggleValueMasking() {
 	if tp.valuePanel != nil {
@@ -613,6 +619,14 @@ func (tp *SecretsTree) copySecretValue() {
 		return
 	}
 
+	var copiedMessage string
+	defer func() {
+		// Display info dialog if something was copied
+		if copiedMessage != "" && tp.dialogSvc != nil {
+			tp.dialogSvc.ShowInfo("Clipboard", copiedMessage, nil)
+		}
+	}()
+
 	// Check if this is a key node (child of a secret)
 	if keyRef, ok := reference.(string); ok {
 		// This is a key within a secret - copy that specific key's value
@@ -620,7 +634,9 @@ func (tp *SecretsTree) copySecretValue() {
 		if parent != nil {
 			if parentRef := parent.GetReference(); parentRef != nil {
 				if secret, ok := parentRef.(*vault.SecretNode); ok {
-					tp.copyKeyValue(secret, keyRef)
+					if tp.copyKeyValue(secret, keyRef) {
+						copiedMessage = fmt.Sprintf("Copied '%s' key '%s' value to clipboard", secret.Path, keyRef)
+					}
 					return
 				}
 			}
@@ -629,26 +645,30 @@ func (tp *SecretsTree) copySecretValue() {
 
 	// Otherwise, check if it's a secret node
 	if secret, ok := reference.(*vault.SecretNode); ok && secret.IsSecret {
-		tp.copySecretValues(secret)
+		if tp.copySecretValues(secret) {
+			copiedMessage = fmt.Sprintf("Copied '%s' value(s) to clipboard", secret.Path)
+		}
 	}
 }
 
 // copyKeyValue copies a specific key's value from a secret
-func (tp *SecretsTree) copyKeyValue(secret *vault.SecretNode, key string) {
+func (tp *SecretsTree) copyKeyValue(secret *vault.SecretNode, key string) bool {
 	if err := tp.clipboardHandler.CopyKeyValue(secret, key); err != nil {
 		tp.logger.Errorf("Failed to copy key value: %v", err)
-		return
+		return false
 	}
 	tp.logger.Infof("Copied key '%s' value to clipboard", key)
+	return true
 }
 
 // copySecretValues copies all values from a secret (or single value if only one key)
-func (tp *SecretsTree) copySecretValues(secret *vault.SecretNode) {
+func (tp *SecretsTree) copySecretValues(secret *vault.SecretNode) bool {
 	if err := tp.clipboardHandler.CopySecretValues(secret); err != nil {
 		tp.logger.Errorf("Failed to copy secret values: %v", err)
-		return
+		return false
 	}
 	tp.logger.Info("Copied secret values to clipboard")
+	return true
 }
 
 // showModal shows or hides a modal
