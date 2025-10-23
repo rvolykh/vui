@@ -5,7 +5,7 @@ SHELL := /bin/bash
 VERSION?=dev
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-LDFLAGS=-ldflags "-X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.gitCommit=$(GIT_COMMIT)"
+LDFLAGS=-ldflags "-s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
 
 # Allow to pass args to targets
 cmd := $(firstword $(MAKECMDGOALS))
@@ -30,7 +30,7 @@ vet: ## Examine source code
 .PHONY: vet
 
 build: ## Build the application
-	@ go build $(LDFLAGS) -o vui ./cmd/vui
+	@ go build -trimpath $(LDFLAGS) -o vui ./cmd/vui
 .PHONY: build
 
 ##@ Test targets
