@@ -2,10 +2,9 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 # Variables
-VERSION?=dev
+VERSION?=$(shell git describe --exact-match --tags 2> /dev/null || echo "dev")
 BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
 GIT_COMMIT=$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-LDFLAGS=-ldflags "-s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
 
 # Allow to pass args to targets
 cmd := $(firstword $(MAKECMDGOALS))
@@ -16,8 +15,7 @@ args := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 
 ##@ Build targets
 
-deps: ## Download and tidy dependencies
-	@ go mod download
+deps: ## Download dependencies
 	@ go mod tidy
 .PHONY: deps
 
@@ -29,8 +27,12 @@ vet: ## Examine source code
 	@ go vet ./...
 .PHONY: vet
 
+build: export CGO_ENABLED=0
 build: ## Build the application
-	@ go build -trimpath $(LDFLAGS) -o vui ./cmd/vui
+	@ go build \
+		-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)" \
+		-o vui \
+		./cmd/vui
 .PHONY: build
 
 ##@ Test targets
@@ -81,6 +83,7 @@ clean: ## Clean temporary files
 	@ rm -f ./vui
 	@ rm -f *.log
 	@ rm -f coverage.*
+	@ rm -rf ./dist/
 .PHONY: clean
 
 help: ## Show help message

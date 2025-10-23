@@ -1,41 +1,10 @@
 # VUI (Vault UI)
 
-A Console User Interface (CUI) application for HashiCorp Vault, inspired by derailed/k9s.
+A Console User Interface (CUI) application for HashiCorp Vault.
 
 ## Overview
 
 VUI provides an intuitive terminal-based interface for exploring and managing secrets in HashiCorp Vault. The application supports multiple vault connections, hierarchical secret navigation, and full CRUD operations.
-
-### 🔧 Dependencies
-
-- **Vault API**: `github.com/hashicorp/vault/api` - Official HashiCorp Vault client
-- **Configuration**: `github.com/spf13/viper` - Configuration management
-- **Terminal UI**: `github.com/rivo/tview` - Terminal user interface framework
-- **Terminal Control**: `github.com/gdamore/tcell/v2` - Terminal control library
-- **Clipboard**: `github.com/atotto/clipboard` - Cross-platform clipboard access
-- **Logging**: `github.com/sirupsen/logrus` - Structured logging
-- **Testing**: `github.com/stretchr/testify` - Test assertions
-
-## Installation
-
-### Prerequisites
-
-- Go 1.21 or later
-- HashiCorp Vault server (optional - application starts gracefully without it)
-
-### Build from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/rvolykh/vui.git
-cd vui
-
-# Build the application
-make build
-
-# Run the application
-./vui
-```
 
 ## Usage
 
@@ -75,35 +44,6 @@ When no vault servers are connected, you'll see:
 - `r/F5`: Refresh
 - `q/Ctrl+C`: Exit application
 
-### Available Make Targets
-
-```text
-Usage:
-  make <target>
-
-Build targets
-  deps                  Download and tidy dependencies
-  fmt                   Format source code
-  vet                   Examine source code
-  build                 Build the application
-
-Test targets
-  test                  Run tests, e.g. make test, make test TestCoalesce
-  coverage              Run tests with coverage
-
-Sandbox targets
-  sbx-build             Build sandbox init image(s)
-  sbx-up                Create sandbox, e.g. make sbx-up, make sbx-up vault
-  sbx-logs              Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
-  sbx-ps                Show sandbox services
-  sbx-run               Run vui in sandbox
-  sbx-down              Destroy sandbox
-
-Other targets
-  clean                 Clean temporary files
-  help                  Show help message
-```
-
 ## Configuration
 
 VUI uses YAML configuration files with environment variable support.
@@ -134,6 +74,8 @@ vaults:
     namespace: ""
 ```
 
+For complete example, see [vui.yaml](./configs/vui.yaml)
+
 ### Advanced Authentication Examples
 
 #### LDAP Authentication
@@ -160,20 +102,6 @@ vaults:
       aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
       aws_role: "vault-role"
       aws_region: "us-east-1"
-```
-
-#### Azure Authentication
-```yaml
-vaults:
-  azure_vault:
-    address: "https://vault.company.com"
-    auth_method: "azure"
-    namespace: "azure"
-    auth_config:
-      azure_tenant_id: "${AZURE_TENANT_ID}"
-      azure_client_id: "${AZURE_CLIENT_ID}"
-      azure_client_secret: "${AZURE_CLIENT_SECRET}"
-      azure_role: "vault-role"
 ```
 
 #### Kubernetes Authentication
@@ -213,36 +141,76 @@ vaults:
       key_path: "/path/to/client.key"
 ```
 
+## Installation
+
+### Download from Release
+
+[https://github.com/rvolykh/vui/releases](https://github.com/rvolykh/vui/releases)
+
+### Build from Source
+
+Prerequisites:
+- Go 1.21 or later
+
+Steps:
+```bash
+# Clone the repository
+git clone https://github.com/rvolykh/vui.git
+cd vui
+
+# Build the application
+make build
+
+# Run the application
+./vui
+```
+
 ## Development
 
-### Running Tests
+### Available Make Targets
 
-```bash
-make test     # Run tests
-make coverage # Run tests with coverage
+```text
+Usage:
+  make <target>
+
+Build targets
+  deps                  Download and tidy dependencies
+  fmt                   Format source code
+  vet                   Examine source code
+  build                 Build the application
+
+Test targets
+  test                  Run tests, e.g. make test, make test TestCoalesce
+  coverage              Run tests with coverage
+
+Sandbox targets
+  sbx-build             Build sandbox init image(s)
+  sbx-up                Create sandbox, e.g. make sbx-up, make sbx-up vault
+  sbx-logs              Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
+  sbx-ps                Show sandbox services
+  sbx-run               Run vui in sandbox
+  sbx-down              Destroy sandbox
+
+Other targets
+  clean                 Clean temporary files
+  help                  Show help message
 ```
 
-### Code Quality
-
-```bash
-make fmt  # Format source code
-make vet  # Examine source code
-```
-
-## Sandbox
+### Sandbox
 
 Local playground environment with different vault auths / profiles.
 
-```bash
-make sbx-build  # Build sandbox init image(s)
-make sbx-up     # Create sandbox, e.g. make sbx-up, make sbx-up vault
-make sbx-logs   # Show logs for sandbox, e.g. make sbx-logs, make sbx-logs vault
-make sbx-ps     # Show sandbox services
-make sbx-run    # Run vui in sandbox
-make sbx-down   # Destroy sandbox
-```
-
 Refer to [Sandbox](./sandbox/README.md) for more details.
+
+### 🔧 Dependencies
+
+- **Vault API**: `github.com/hashicorp/vault/api` - Official HashiCorp Vault client
+- **Configuration**: `github.com/spf13/viper` - Configuration management
+- **Terminal UI**: `github.com/rivo/tview` - Terminal user interface framework
+- **Terminal Control**: `github.com/gdamore/tcell/v2` - Terminal control library
+- **Clipboard**: `github.com/atotto/clipboard` - Cross-platform clipboard access
+- **Logging**: `github.com/sirupsen/logrus` - Structured logging
+- **Testing**: `github.com/stretchr/testify` - Test assertions
 
 ## Acknowledgments
 
