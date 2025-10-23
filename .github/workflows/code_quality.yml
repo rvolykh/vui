@@ -1,0 +1,23 @@
+name: code-quality
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup_go
+      - run: make deps
+      - run: make fmt
+      - run: make vet
+      - run: make coverage
