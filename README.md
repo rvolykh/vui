@@ -119,13 +119,12 @@ The application looks for configuration in:
 
 ```yaml
 app:
-  theme: "dark"
-  refresh_interval: 30
+  log_level: "info"
+  log_file: "vui.log"
 
 ui:
+  theme: "dark"
   show_hidden_secrets: false
-  confirm_deletions: true
-  auto_refresh: true
 
 vaults:
   local:
