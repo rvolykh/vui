@@ -230,7 +230,20 @@ func (fb *KeyValueFormBuilder) createAddKeyValueHandler() func() {
 // createSaveHandler creates the handler for saving the form
 func (fb *KeyValueFormBuilder) createSaveHandler() func() {
 	return func() {
-		// Auto-add unsaved key-value fields before saving
+		fb.logger.Info("Save button clicked")
+
+		// Collect all existing key-value fields (for edit mode)
+		existingFields := fb.collectAllKeyValueFields()
+		fb.logger.Infof("Collected %d existing key-value fields", len(existingFields))
+
+		// Update the internal keyValuePairs map with current values from existing fields
+		for key, textArea := range existingFields {
+			currentValue := textArea.GetText()
+			fb.keyValuePairs[key] = currentValue
+			fb.logger.Infof("Updated key '%s' with current value (length=%d)", key, len(currentValue))
+		}
+
+		// Auto-add unsaved key-value fields before saving (for new pairs)
 		keyField, valueField := fb.findKeyValueFields()
 		if keyField != nil && valueField != nil {
 			// Trim key but preserve whitespace in value (including newlines)
@@ -239,9 +252,11 @@ func (fb *KeyValueFormBuilder) createSaveHandler() func() {
 
 			if key != "" && value != "" {
 				fb.keyValuePairs[key] = value
-				fb.logger.Infof("Auto-added key-value pair before save: %s", key)
+				fb.logger.Infof("Auto-added new key-value pair before save: %s", key)
 			}
 		}
+
+		fb.logger.Infof("Final keyValuePairs count: %d", len(fb.keyValuePairs))
 
 		// Call the save callback
 		if fb.config.OnSave != nil {
@@ -300,4 +315,36 @@ func (fb *KeyValueFormBuilder) findKeyValueFields() (*tview.InputField, *tview.T
 
 	fb.logger.Infof("findKeyValueFields: Result - keyField=%v, valueField=%v", keyField != nil, valueField != nil)
 	return keyField, valueField
+}
+
+// collectAllKeyValueFields collects all key-value fields from the form for edit mode
+func (fb *KeyValueFormBuilder) collectAllKeyValueFields() map[string]*tview.TextArea {
+	fb.logger.Info("collectAllKeyValueFields: Starting collection")
+	keyValueFields := make(map[string]*tview.TextArea)
+
+	if fb.currentForm == nil {
+		fb.logger.Error("collectAllKeyValueFields: currentForm is nil")
+		return keyValueFields
+	}
+
+	formItemCount := fb.currentForm.GetFormItemCount()
+	fb.logger.Infof("collectAllKeyValueFields: Form has %d items", formItemCount)
+
+	// Scan all form items to find TextArea fields that represent existing keys
+	for i := 0; i < formItemCount; i++ {
+		item := fb.currentForm.GetFormItem(i)
+		if textArea, ok := item.(*tview.TextArea); ok {
+			label := textArea.GetLabel()
+			fb.logger.Infof("collectAllKeyValueFields: Found TextArea at index %d with label='%s'", i, label)
+
+			// Skip the "Value" field for new pairs, collect all others (existing keys)
+			if label != "Value" {
+				keyValueFields[label] = textArea
+				fb.logger.Infof("collectAllKeyValueFields: Collected field for key='%s'", label)
+			}
+		}
+	}
+
+	fb.logger.Infof("collectAllKeyValueFields: Collected %d key-value fields", len(keyValueFields))
+	return keyValueFields
 }
