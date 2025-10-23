@@ -4,7 +4,18 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/rvolykh/vui/internal/config"
+	"github.com/sirupsen/logrus"
 )
+
+// Client wraps the Vault API client with additional functionality
+type Client struct {
+	apiClient *api.Client
+	profile   *config.VaultProfile
+	logger    *logrus.Logger
+}
 
 // TestConnection tests the connection to the vault
 func (c *Client) TestConnection() error {

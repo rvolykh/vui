@@ -15,18 +15,11 @@ type Manager struct {
 	config        *config.Config
 	clients       map[string]*Client
 	activeVault   string
-	connectionMgr *ConnectionManager
-	secretsMgr    *SecretsManager
-	authMgr       *auth.AuthManager
+	connectionMgr vaultConnectionManager
+	secretsMgr    vaultSecretsManager
+	authMgr       vaultAuthenticator
 	mutex         sync.RWMutex
 	logger        *logrus.Logger
-}
-
-// Client wraps the Vault API client with additional functionality
-type Client struct {
-	apiClient *api.Client
-	profile   *config.VaultProfile
-	logger    *logrus.Logger
 }
 
 // NewManager creates a new vault manager
@@ -276,7 +269,7 @@ func (m *Manager) GetActiveVault() string {
 }
 
 // GetConnectionManager returns the connection manager
-func (m *Manager) GetConnectionManager() *ConnectionManager {
+func (m *Manager) GetConnectionManager() vaultConnectionManager {
 	return m.connectionMgr
 }
 

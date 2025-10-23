@@ -9,6 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	connectionTimeout = 10 * time.Second
+)
+
 // ConnectionStatus represents the status of a vault connection
 type ConnectionStatus struct {
 	Connecting  bool      `json:"connecting"`
@@ -197,7 +201,7 @@ func (cm *ConnectionManager) SetAllConnecting() {
 
 // testConnection tests a vault connection and returns its status
 func (cm *ConnectionManager) testConnection(client *Client) (*ConnectionStatus, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 
 	// Get vault status
