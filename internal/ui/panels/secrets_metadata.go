@@ -4,26 +4,27 @@ import (
 	"fmt"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/sirupsen/logrus"
 )
 
 // SecretsMetadata represents the secret metadata panel
 type SecretsMetadata struct {
 	config        *config.Config
-	vaultMgr      *vault.Manager
+	interactor    backend.Interactor
 	textView      *tview.TextView
-	currentSecret *vault.SecretNode
+	currentSecret *models.SecretNode
 	logger        *logrus.Logger
 }
 
 // NewSecretsMetadata creates a new metadata panel
-func NewSecretsMetadata(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsMetadata {
+func NewSecretsMetadata(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *SecretsMetadata {
 	return &SecretsMetadata{
-		config:   config,
-		vaultMgr: vaultMgr,
-		logger:   logger,
+		config:     config,
+		interactor: interactor,
+		logger:     logger,
 	}
 }
 
@@ -47,7 +48,7 @@ func (mp *SecretsMetadata) Initialize() error {
 }
 
 // ShowSecret displays secret metadata
-func (mp *SecretsMetadata) ShowSecret(secret *vault.SecretNode) {
+func (mp *SecretsMetadata) ShowSecret(secret *models.SecretNode) {
 	mp.currentSecret = secret
 	mp.displayMetadata(secret)
 }
@@ -64,7 +65,7 @@ func (mp *SecretsMetadata) ShowDirectory(path string, itemCount int) {
 }
 
 // displayMetadata displays secret metadata
-func (mp *SecretsMetadata) displayMetadata(secret *vault.SecretNode) {
+func (mp *SecretsMetadata) displayMetadata(secret *models.SecretNode) {
 	content := fmt.Sprintf(`[yellow]Type:[white] Secret
 [yellow]Name:[white] %s
 [yellow]Path:[white] %s`, secret.Name, secret.Path)
@@ -94,7 +95,7 @@ func (mp *SecretsMetadata) displayMetadata(secret *vault.SecretNode) {
 }
 
 // ShowKey displays metadata for a specific key within a secret
-func (mp *SecretsMetadata) ShowKey(secret *vault.SecretNode, key string) {
+func (mp *SecretsMetadata) ShowKey(secret *models.SecretNode, key string) {
 	mp.currentSecret = secret
 	content := fmt.Sprintf(`[yellow]Type:[white] Secret Key
 [yellow]Secret:[white] %s

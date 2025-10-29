@@ -3,28 +3,21 @@ package panels
 import (
 	"testing"
 
-	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSecretsStatus(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	assert.NotNil(t, statusBar)
 }
 
 func TestSecretsStatus_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	err := statusBar.Initialize()
 
 	assert.NoError(t, err)
@@ -32,11 +25,9 @@ func TestSecretsStatus_Initialize(t *testing.T) {
 }
 
 func TestSecretsStatus_UpdateSelection(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	statusBar := NewSecretsStatus(cfg, vaultMgr, logger)
+	statusBar := NewSecretsStatus(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	statusBar.Initialize()
 
 	tests := []struct {

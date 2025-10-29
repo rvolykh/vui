@@ -6,29 +6,30 @@ import (
 	"strings"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/sirupsen/logrus"
 )
 
 // SecretsValue represents the secret value display panel
 type SecretsValue struct {
 	config        *config.Config
-	vaultMgr      *vault.Manager
+	interactor    backend.Interactor
 	textView      *tview.TextView
-	currentSecret *vault.SecretNode
+	currentSecret *models.SecretNode
 	currentKey    string
 	isMasked      bool // Track if values are currently masked
 	logger        *logrus.Logger
 }
 
 // NewSecretsValue creates a new secrets value panel
-func NewSecretsValue(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsValue {
+func NewSecretsValue(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *SecretsValue {
 	return &SecretsValue{
-		config:   config,
-		vaultMgr: vaultMgr,
-		isMasked: !config.UI.ShowHiddenSecrets,
-		logger:   logger,
+		config:     config,
+		interactor: interactor,
+		isMasked:   !config.UI.ShowHiddenSecrets,
+		logger:     logger,
 	}
 }
 
@@ -53,7 +54,7 @@ func (vp *SecretsValue) Initialize() error {
 }
 
 // ShowSecret displays all key-value pairs of a secret
-func (vp *SecretsValue) ShowSecret(secret *vault.SecretNode) {
+func (vp *SecretsValue) ShowSecret(secret *models.SecretNode) {
 	vp.currentSecret = secret
 	vp.currentKey = ""
 	vp.isMasked = !vp.config.UI.ShowHiddenSecrets // Reset to masked when showing a new secret
@@ -61,7 +62,7 @@ func (vp *SecretsValue) ShowSecret(secret *vault.SecretNode) {
 }
 
 // ShowKey displays a specific key's value from a secret
-func (vp *SecretsValue) ShowKey(secret *vault.SecretNode, key string) {
+func (vp *SecretsValue) ShowKey(secret *models.SecretNode, key string) {
 	vp.currentSecret = secret
 	vp.currentKey = key
 	vp.isMasked = !vp.config.UI.ShowHiddenSecrets // Reset to masked when showing a new key
@@ -80,7 +81,7 @@ Select a secret to view its contents.[white]`, path)
 }
 
 // displaySecretData displays all key-value pairs of a secret
-func (vp *SecretsValue) displaySecretData(secret *vault.SecretNode) {
+func (vp *SecretsValue) displaySecretData(secret *models.SecretNode) {
 	var content strings.Builder
 
 	content.WriteString("[yellow]Secret Data:[white]\n\n")
@@ -115,7 +116,7 @@ func (vp *SecretsValue) displaySecretData(secret *vault.SecretNode) {
 }
 
 // displayKeyValue displays a specific key's value
-func (vp *SecretsValue) displayKeyValue(secret *vault.SecretNode, key string) {
+func (vp *SecretsValue) displayKeyValue(secret *models.SecretNode, key string) {
 	var content strings.Builder
 
 	content.WriteString(fmt.Sprintf("[yellow]Key:[white] [green]%s[white]\n\n", key))

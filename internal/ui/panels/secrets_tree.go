@@ -7,22 +7,23 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/rvolykh/vui/internal/ui/forms"
 	"github.com/rvolykh/vui/internal/ui/handlers"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // SecretsTree represents the secrets tree panel
 type SecretsTree struct {
 	config           *config.Config
-	vaultMgr         *vault.Manager
+	interactor       backend.Interactor
 	tree             *tview.TreeView
 	rootNode         *tview.TreeNode
 	formsMgr         *forms.FormsManager
 	clipboardHandler *handlers.ClipboardHandler
-	selectionHandler func(*vault.SecretNode, string)
+	selectionHandler func(*models.SecretNode, string)
 	refreshHandler   func()
 	modalHandler     func(tview.Primitive, bool) // Handler to show/hide modals
 	valuePanel       *SecretsValue               // Reference to value panel for mask toggle
@@ -32,12 +33,12 @@ type SecretsTree struct {
 }
 
 // NewSecretsTree creates a new tree panel
-func NewSecretsTree(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *SecretsTree {
+func NewSecretsTree(config *config.Config, interactor backend.Interactor, logger *logrus.Logger, app *tview.Application) *SecretsTree {
 	return &SecretsTree{
 		config:           config,
-		vaultMgr:         vaultMgr,
-		formsMgr:         forms.NewFormsManager(config, vaultMgr, logger, app),
-		clipboardHandler: handlers.NewClipboardHandler(vaultMgr),
+		interactor:       interactor,
+		formsMgr:         forms.NewFormsManager(config, interactor, logger, app),
+		clipboardHandler: handlers.NewClipboardHandler(interactor),
 		app:              app,
 		logger:           logger,
 	}
@@ -121,7 +122,7 @@ func (tp *SecretsTree) setupKeyboardNavigation() {
 func (tp *SecretsTree) loadTree() error {
 	tp.logger.Info("Loading secrets tree...")
 
-	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := tp.interactor.Secrets()
 	if err != nil {
 		tp.logger.Warnf("Failed to get secrets manager: %v", err)
 		// Create an empty tree with a message
@@ -129,7 +130,7 @@ func (tp *SecretsTree) loadTree() error {
 	}
 
 	// Build the tree structure
-	rootNode, err := tp.buildTree(secretsManager, "")
+	rootNode, err := tp.buildTree(secretsInteractor, "")
 	if err != nil {
 		tp.logger.Warnf("Failed to build tree: %v", err)
 		// Create an empty tree with an error message
@@ -170,11 +171,11 @@ func (tp *SecretsTree) createEmptyTree(message string) error {
 }
 
 // buildTree builds the tree structure recursively
-func (tp *SecretsTree) buildTree(secretsManager *vault.SecretsManager, path string) (*tview.TreeNode, error) {
+func (tp *SecretsTree) buildTree(secretsInteractor backend.SecretsInteractor, path string) (*tview.TreeNode, error) {
 	tp.logger.Infof("Building tree for path: '%s'", path)
 
 	// Get secrets at this path
-	secrets, err := secretsManager.ListSecrets(path)
+	secrets, err := secretsInteractor.ListSecrets(path)
 	if err != nil {
 		tp.logger.Errorf("Failed to list secrets at path '%s': %v", path, err)
 		return nil, fmt.Errorf("failed to list secrets at path '%s': %w", path, err)
@@ -237,7 +238,7 @@ func (tp *SecretsTree) handleNodeChanged(node *tview.TreeNode) {
 		parent := tp.findParentNode(node)
 		if parent != nil {
 			if parentRef := parent.GetReference(); parentRef != nil {
-				if secret, ok := parentRef.(*vault.SecretNode); ok {
+				if secret, ok := parentRef.(*models.SecretNode); ok {
 					tp.logger.Infof("Key navigated to: %s in secret %s", keyRef, secret.Path)
 					if tp.selectionHandler != nil {
 						tp.selectionHandler(secret, keyRef)
@@ -248,7 +249,7 @@ func (tp *SecretsTree) handleNodeChanged(node *tview.TreeNode) {
 		}
 	}
 
-	secret, ok := reference.(*vault.SecretNode)
+	secret, ok := reference.(*models.SecretNode)
 	if !ok {
 		return
 	}
@@ -276,7 +277,7 @@ func (tp *SecretsTree) handleNodeSelection(node *tview.TreeNode) {
 		return
 	}
 
-	secret, ok := reference.(*vault.SecretNode)
+	secret, ok := reference.(*models.SecretNode)
 	if !ok {
 		tp.logger.Debug("Node selection: reference is not a SecretNode")
 		return
@@ -309,7 +310,7 @@ func (tp *SecretsTree) expandDirectory(node *tview.TreeNode, path string) {
 	// First time expanding - load the children
 	tp.logger.Infof("Loading children for directory: %s", path)
 
-	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := tp.interactor.Secrets()
 	if err != nil {
 		tp.logger.Errorf("Failed to get secrets manager: %v", err)
 		// Add error node
@@ -321,7 +322,7 @@ func (tp *SecretsTree) expandDirectory(node *tview.TreeNode, path string) {
 	}
 
 	// Get secrets in this directory
-	secrets, err := secretsManager.ListSecrets(path)
+	secrets, err := secretsInteractor.ListSecrets(path)
 	if err != nil {
 		tp.logger.Errorf("Failed to list secrets in directory '%s': %v", path, err)
 		// Add error node
@@ -368,7 +369,7 @@ func (tp *SecretsTree) expandDirectory(node *tview.TreeNode, path string) {
 }
 
 // expandSecret expands a secret node to show its keys
-func (tp *SecretsTree) expandSecret(node *tview.TreeNode, secret *vault.SecretNode) {
+func (tp *SecretsTree) expandSecret(node *tview.TreeNode, secret *models.SecretNode) {
 	tp.logger.Infof("Expanding secret: %s", secret.Path)
 
 	// Check if already loaded (has children)
@@ -383,7 +384,7 @@ func (tp *SecretsTree) expandSecret(node *tview.TreeNode, secret *vault.SecretNo
 	// First time expanding - load the secret data to get keys
 	tp.logger.Infof("Loading keys for secret: %s", secret.Path)
 
-	secretsManager, err := tp.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := tp.interactor.Secrets()
 	if err != nil {
 		tp.logger.Errorf("Failed to get secrets manager: %v", err)
 		// Add error node
@@ -395,7 +396,7 @@ func (tp *SecretsTree) expandSecret(node *tview.TreeNode, secret *vault.SecretNo
 	}
 
 	// Get the full secret with data
-	fullSecret, err := secretsManager.GetSecret(secret.Path)
+	fullSecret, err := secretsInteractor.GetSecret(secret.Path)
 	if err != nil {
 		tp.logger.Errorf("Failed to get secret '%s': %v", secret.Path, err)
 		// Add error node
@@ -475,7 +476,7 @@ func (tp *SecretsTree) createSecret() {
 	var basePath string
 	reference := node.GetReference()
 	if reference != nil {
-		if secret, ok := reference.(*vault.SecretNode); ok {
+		if secret, ok := reference.(*models.SecretNode); ok {
 			if secret.IsSecret {
 				// If a secret is selected, use its parent directory
 				basePath = strings.TrimSuffix(secret.Path, "/"+secret.Name)
@@ -510,7 +511,7 @@ func (tp *SecretsTree) editSecret() {
 		return
 	}
 
-	secret, ok := reference.(*vault.SecretNode)
+	secret, ok := reference.(*models.SecretNode)
 	if !ok || !secret.IsSecret {
 		return
 	}
@@ -539,7 +540,7 @@ func (tp *SecretsTree) deleteSecret() {
 		return
 	}
 
-	secret, ok := reference.(*vault.SecretNode)
+	secret, ok := reference.(*models.SecretNode)
 	if !ok || !secret.IsSecret {
 		return
 	}
@@ -573,7 +574,7 @@ func (tp *SecretsTree) Refresh() {
 }
 
 // SetSelectionHandler sets the selection handler
-func (tp *SecretsTree) SetSelectionHandler(handler func(*vault.SecretNode, string)) {
+func (tp *SecretsTree) SetSelectionHandler(handler func(*models.SecretNode, string)) {
 	tp.selectionHandler = handler
 }
 
@@ -633,7 +634,7 @@ func (tp *SecretsTree) copySecretValue() {
 		parent := tp.findParentNode(node)
 		if parent != nil {
 			if parentRef := parent.GetReference(); parentRef != nil {
-				if secret, ok := parentRef.(*vault.SecretNode); ok {
+				if secret, ok := parentRef.(*models.SecretNode); ok {
 					if tp.copyKeyValue(secret, keyRef) {
 						copiedMessage = fmt.Sprintf("Copied '%s' key '%s' value to clipboard", secret.Path, keyRef)
 					}
@@ -644,7 +645,7 @@ func (tp *SecretsTree) copySecretValue() {
 	}
 
 	// Otherwise, check if it's a secret node
-	if secret, ok := reference.(*vault.SecretNode); ok && secret.IsSecret {
+	if secret, ok := reference.(*models.SecretNode); ok && secret.IsSecret {
 		if tp.copySecretValues(secret) {
 			copiedMessage = fmt.Sprintf("Copied '%s' value(s) to clipboard", secret.Path)
 		}
@@ -652,7 +653,7 @@ func (tp *SecretsTree) copySecretValue() {
 }
 
 // copyKeyValue copies a specific key's value from a secret
-func (tp *SecretsTree) copyKeyValue(secret *vault.SecretNode, key string) bool {
+func (tp *SecretsTree) copyKeyValue(secret *models.SecretNode, key string) bool {
 	if err := tp.clipboardHandler.CopyKeyValue(secret, key); err != nil {
 		tp.logger.Errorf("Failed to copy key value: %v", err)
 		return false
@@ -662,7 +663,7 @@ func (tp *SecretsTree) copyKeyValue(secret *vault.SecretNode, key string) bool {
 }
 
 // copySecretValues copies all values from a secret (or single value if only one key)
-func (tp *SecretsTree) copySecretValues(secret *vault.SecretNode) bool {
+func (tp *SecretsTree) copySecretValues(secret *models.SecretNode) bool {
 	if err := tp.clipboardHandler.CopySecretValues(secret); err != nil {
 		tp.logger.Errorf("Failed to copy secret values: %v", err)
 		return false

@@ -4,28 +4,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSecretsMetadata(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	assert.NotNil(t, panel)
 }
 
 func TestSecretsMetadata_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	err := panel.Initialize()
 
 	assert.NoError(t, err)
@@ -33,14 +27,11 @@ func TestSecretsMetadata_Initialize(t *testing.T) {
 }
 
 func TestSecretsMetadata_ShowSecret(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
 
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
@@ -48,7 +39,7 @@ func TestSecretsMetadata_ShowSecret(t *testing.T) {
 			"password": "secret123",
 			"username": "admin",
 		},
-		Metadata: &vault.SecretMetadata{
+		Metadata: &models.SecretMetadata{
 			Version:     2,
 			CreatedTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
 			Destroyed:   false,
@@ -61,11 +52,8 @@ func TestSecretsMetadata_ShowSecret(t *testing.T) {
 }
 
 func TestSecretsMetadata_ShowDirectory(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
 
 	panel.ShowDirectory("secrets/test", 5)
@@ -74,14 +62,10 @@ func TestSecretsMetadata_ShowDirectory(t *testing.T) {
 }
 
 func TestSecretsMetadata_ShowKey(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
-
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
@@ -96,21 +80,17 @@ func TestSecretsMetadata_ShowKey(t *testing.T) {
 }
 
 func TestSecretsMetadata_Refresh(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsMetadata(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsMetadata(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
-
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
 		Data: map[string]interface{}{
 			"password": "secret123",
 		},
-		Metadata: &vault.SecretMetadata{
+		Metadata: &models.SecretMetadata{
 			Version:     1,
 			CreatedTime: time.Now(),
 		},

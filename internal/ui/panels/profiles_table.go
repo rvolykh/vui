@@ -8,15 +8,16 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/sirupsen/logrus"
 )
 
 // ProfilesTable displays vault profiles with connection status
 type ProfilesTable struct {
 	config          *config.Config
-	vaultMgr        *vault.Manager
+	interactor      backend.Interactor
 	table           *tview.Table
 	app             *tview.Application
 	logger          *logrus.Logger
@@ -28,10 +29,10 @@ type ProfilesTable struct {
 }
 
 // NewProfilesTable creates a new vault profiles panel
-func NewProfilesTable(config *config.Config, vaultMgr *vault.Manager, app *tview.Application, logger *logrus.Logger) *ProfilesTable {
+func NewProfilesTable(config *config.Config, interactor backend.Interactor, app *tview.Application, logger *logrus.Logger) *ProfilesTable {
 	return &ProfilesTable{
 		config:      config,
-		vaultMgr:    vaultMgr,
+		interactor:  interactor,
 		app:         app,
 		logger:      logger,
 		stopRefresh: make(chan struct{}),
@@ -107,13 +108,13 @@ func (vpp *ProfilesTable) startRefresher() {
 
 // hasConnectingProfiles checks if there are any profiles that are in the process of connecting
 func (vpp *ProfilesTable) hasConnectingProfiles() bool {
-	vaults := vpp.vaultMgr.ListVaults()
-	for _, vaultName := range vaults {
-		status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
+	profiles := vpp.interactor.Profiles().ListConnections()
+	for _, name := range profiles {
+		status, err := vpp.interactor.Profiles().GetConnectionStatus(name)
 		if err != nil {
 			continue
 		}
-		if status.Connecting {
+		if status.Status == models.StatusConnecting {
 			return true
 		}
 	}
@@ -166,11 +167,11 @@ func (vpp *ProfilesTable) loadProfiles() error {
 	vpp.table.Clear()
 
 	// Get available vaults
-	vaults := vpp.vaultMgr.ListVaults()
+	profiles := vpp.interactor.Profiles().ListConnections()
 
 	// Sort vaults by name (ascending)
-	sort.Strings(vaults)
-	vpp.vaultNames = vaults
+	sort.Strings(profiles)
+	vpp.vaultNames = profiles
 
 	// Create header row
 	headers := []string{"Name", "Address", "Status", "NOTE"}
@@ -183,9 +184,9 @@ func (vpp *ProfilesTable) loadProfiles() error {
 		vpp.table.SetCell(0, col, cell)
 	}
 
-	if len(vaults) == 0 {
+	if len(profiles) == 0 {
 		// Show a message when no vaults are configured
-		cell := tview.NewTableCell("No vault profiles configured").
+		cell := tview.NewTableCell("No profiles configured").
 			SetAlign(tview.AlignCenter).
 			SetExpansion(1)
 		vpp.table.SetCell(1, 0, cell)
@@ -194,16 +195,16 @@ func (vpp *ProfilesTable) loadProfiles() error {
 
 	// Add each vault profile as a row
 	row := 1
-	for _, vaultName := range vaults {
+	for _, name := range profiles {
 		// Get connection status
-		status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
+		status, err := vpp.interactor.Profiles().GetConnectionStatus(name)
 		if err != nil {
-			vpp.logger.Warnf("Failed to get status for vault '%s': %v", vaultName, err)
+			vpp.logger.Warnf("Failed to get status for profile '%s': %v", name, err)
 			continue
 		}
 
 		// Column 0: Name
-		nameCell := tview.NewTableCell(vaultName).
+		nameCell := tview.NewTableCell(name).
 			SetTextColor(tcell.ColorWhite).
 			SetAlign(tview.AlignLeft)
 		vpp.table.SetCell(row, 0, nameCell)
@@ -252,15 +253,13 @@ func (vpp *ProfilesTable) loadProfiles() error {
 }
 
 // formatStatus formats the status text and color
-func (vpp *ProfilesTable) formatStatus(status *vault.ConnectionStatus) (string, tcell.Color) {
-	if status.Connecting {
+func (vpp *ProfilesTable) formatStatus(status *models.ConnectionStatus) (string, tcell.Color) {
+	if status.Status == models.StatusConnecting {
 		return "⏳ Connecting", tcell.ColorYellow
-	} else if status.Connected {
-		if status.Sealed {
-			return "🔒 Sealed", tcell.ColorOrange
-		} else {
-			return "✅ Connected", tcell.ColorGreen
-		}
+	} else if status.Status == models.StatusConnected {
+		return "✅ Connected", tcell.ColorGreen
+	} else if status.Status == models.StatusSealed {
+		return "🔒 Sealed", tcell.ColorOrange
 	} else {
 		return "❌ Disconnected", tcell.ColorRed
 	}
@@ -281,29 +280,29 @@ func (vpp *ProfilesTable) switchToSelectedVault() {
 }
 
 // switchToVault switches to a specific vault
-func (vpp *ProfilesTable) switchToVault(vaultName string) {
-	if err := vpp.vaultMgr.SwitchVault(vaultName); err != nil {
-		vpp.logger.Errorf("Failed to switch to vault '%s': %v", vaultName, err)
+func (vpp *ProfilesTable) switchToVault(name string) {
+	if err := vpp.interactor.Profiles().SwitchProfile(name); err != nil {
+		vpp.logger.Errorf("Failed to switch to profile '%s': %v", name, err)
 		// Show error dialog if callback is set
 		if vpp.errorCallback != nil {
-			vpp.errorCallback(fmt.Sprintf("Failed to connect to vault '%s':\n\n%v", vaultName, err))
+			vpp.errorCallback(fmt.Sprintf("Failed to connect to profile '%s':\n\n%v", name, err))
 		}
 		vpp.Refresh()
 		return
 	}
 	vpp.StopRefresher()
 
-	vpp.logger.Infof("Switched to vault: %s", vaultName)
+	vpp.logger.Infof("Switched to profile: %s", name)
 
 	// Manually refresh the specific connection
-	vpp.vaultMgr.GetConnectionManager().RefreshConnectionStatus(vaultName)
+	vpp.interactor.Profiles().RefreshConnection(name)
 
 	// Check the connection status
-	status, err := vpp.vaultMgr.GetConnectionStatus(vaultName)
+	status, err := vpp.interactor.Profiles().GetConnectionStatus(name)
 	if err != nil {
-		vpp.logger.Errorf("Failed to get connection status for '%s': %v", vaultName, err)
+		vpp.logger.Errorf("Failed to get connection status for '%s': %v", name, err)
 		if vpp.errorCallback != nil {
-			vpp.errorCallback(fmt.Sprintf("Failed to get connection status for '%s':\n\n%v", vaultName, err))
+			vpp.errorCallback(fmt.Sprintf("Failed to get connection status for '%s':\n\n%v", name, err))
 		}
 		vpp.Refresh()
 		return
@@ -311,18 +310,18 @@ func (vpp *ProfilesTable) switchToVault(vaultName string) {
 
 	// Allow switching if the vault is connected, even if sealed
 	// The user might want to unseal it or view its status
-	if status.Connected {
+	if status.Status == models.StatusConnected {
 		// We have a connection, switch to main layout
 		if vpp.successCallback != nil {
 			vpp.successCallback()
 		}
 	} else {
 		// Not connected yet, show error
-		vpp.logger.Warnf("Vault '%s' is not connected yet (status: %+v)", vaultName, status)
+		vpp.logger.Warnf("Profile '%s' is not connected yet (status: %+v)", name, status)
 		if vpp.errorCallback != nil {
-			errorMsg := fmt.Sprintf("Cannot connect to vault '%s'", vaultName)
+			errorMsg := fmt.Sprintf("Cannot connect to profile '%s'", name)
 			if status.Error != "" {
-				errorMsg = fmt.Sprintf("Cannot connect to vault '%s':\n\n%s", vaultName, status.Error)
+				errorMsg = fmt.Sprintf("Cannot connect to profile '%s':\n\n%s", name, status.Error)
 			}
 			vpp.errorCallback(errorMsg)
 		}
@@ -365,7 +364,7 @@ func (vpp *ProfilesTable) refreshProfiles() {
 	// Run the reload in a goroutine to avoid blocking the UI thread
 	go func() {
 		// Set all connections to "Connecting" state immediately
-		vpp.vaultMgr.GetConnectionManager().SetAllConnecting()
+		vpp.interactor.Profiles().ResetConnections()
 
 		// Refresh the display to show "Connecting" state
 		vpp.app.QueueUpdateDraw(func() {
@@ -373,7 +372,7 @@ func (vpp *ProfilesTable) refreshProfiles() {
 		})
 
 		// Reload configuration from disk (this will test connections asynchronously)
-		if err := vpp.vaultMgr.ReloadConfiguration(); err != nil {
+		if err := vpp.interactor.Profiles().ReloadConfiguration(); err != nil {
 			vpp.logger.Errorf("Failed to reload configuration: %v", err)
 			vpp.app.QueueUpdateDraw(func() {
 				if vpp.errorCallback != nil {

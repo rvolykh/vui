@@ -3,8 +3,8 @@ package ui
 import (
 	"testing"
 
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,14 +21,14 @@ func TestLayoutOfflineMode(t *testing.T) {
 	}
 	logger := logrus.New()
 
-	// Create test vault manager
-	vaultMgr, err := vault.NewManager(cfg, logger)
+	// Create test interactor
+	interactor, err := backend.NewInteractor(logger, cfg)
 	if err != nil {
 		t.Skip("Skipping test - no vault server available")
 	}
 
 	// Create layout
-	layout := NewLayout(cfg, vaultMgr, logger)
+	layout := NewLayout(cfg, interactor, logger)
 
 	// Test initialization (should work even without vault connection)
 	err = layout.Initialize()
@@ -50,12 +50,12 @@ func TestLayoutStructure(t *testing.T) {
 	}
 
 	logger := logrus.New()
-	vaultMgr, err := vault.NewManager(cfg, logger)
+	interactor, err := backend.NewInteractor(logger, cfg)
 	if err != nil {
 		t.Skip("Skipping test - no vault server available")
 	}
 
-	layout := NewLayout(cfg, vaultMgr, logger)
+	layout := NewLayout(cfg, interactor, logger)
 
 	// Initialize the layout
 	err = layout.Initialize()

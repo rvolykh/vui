@@ -2,29 +2,29 @@ package forms
 
 import (
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/ui/handlers"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // FormsManager manages input forms for the application
 type FormsManager struct {
 	config        *config.Config
-	vaultMgr      *vault.Manager
+	interactor    backend.Interactor
 	logger        *logrus.Logger
 	app           *tview.Application
 	secretHandler *handlers.SecretHandler
 }
 
 // NewFormsManager creates a new forms manager
-func NewFormsManager(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger, app *tview.Application) *FormsManager {
+func NewFormsManager(config *config.Config, interactor backend.Interactor, logger *logrus.Logger, app *tview.Application) *FormsManager {
 	return &FormsManager{
 		config:        config,
-		vaultMgr:      vaultMgr,
+		interactor:    interactor,
 		logger:        logger,
 		app:           app,
-		secretHandler: handlers.NewSecretHandler(vaultMgr),
+		secretHandler: handlers.NewSecretHandler(interactor),
 	}
 }
 

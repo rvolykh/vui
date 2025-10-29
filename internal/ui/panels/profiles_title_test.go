@@ -4,27 +4,26 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewProfilesTitle(t *testing.T) {
-	vaultMgr := &vault.Manager{}
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTitle(vaultMgr, false)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	assert.NotNil(t, pt)
-	assert.Equal(t, vaultMgr, pt.vaultMgr)
+	assert.Equal(t, fixtures.interactor, pt.interactor)
 	assert.False(t, pt.hasActiveConn)
 }
 
 func TestNewProfilesTitle_WithActiveConnection(t *testing.T) {
-	vaultMgr := &vault.Manager{}
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTitle(vaultMgr, true)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	assert.NotNil(t, pt)
-	assert.Equal(t, vaultMgr, pt.vaultMgr)
+	assert.Equal(t, fixtures.interactor, pt.interactor)
 	assert.True(t, pt.hasActiveConn)
 }
 
@@ -32,12 +31,12 @@ func TestNewProfilesTitle_WithNilVaultManager(t *testing.T) {
 	pt := NewProfilesTitle(nil, false)
 
 	assert.NotNil(t, pt)
-	assert.Nil(t, pt.vaultMgr)
+	assert.Nil(t, pt.interactor)
 }
 
 func TestProfilesTitle_Build(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	textView := pt.Build()
 
@@ -45,8 +44,8 @@ func TestProfilesTitle_Build(t *testing.T) {
 }
 
 func TestProfilesTitle_Build_WithActiveConnection(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, true)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	textView := pt.Build()
 
@@ -54,8 +53,8 @@ func TestProfilesTitle_Build_WithActiveConnection(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_MinimumWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Test with width below minimum (should be clamped to 60)
 	content := pt.buildContent(40)
@@ -68,8 +67,8 @@ func TestProfilesTitle_BuildContent_MinimumWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_MaximumWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Test with width above maximum (should be clamped to 120)
 	content := pt.buildContent(200)
@@ -79,8 +78,8 @@ func TestProfilesTitle_BuildContent_MaximumWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_NormalWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -93,8 +92,8 @@ func TestProfilesTitle_BuildContent_NormalWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_ContainsConfigPaths(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -105,8 +104,8 @@ func TestProfilesTitle_BuildContent_ContainsConfigPaths(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_ContainsNavigationItems(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -122,8 +121,8 @@ func TestProfilesTitle_BuildContent_ContainsNavigationItems(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_HasBorders(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -137,8 +136,8 @@ func TestProfilesTitle_BuildContent_HasBorders(t *testing.T) {
 }
 
 func TestProfilesTitle_GetConnectionStatus_NoConnection(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	status := pt.getConnectionStatus()
 
@@ -147,8 +146,8 @@ func TestProfilesTitle_GetConnectionStatus_NoConnection(t *testing.T) {
 }
 
 func TestProfilesTitle_GetConnectionStatus_HasActiveConnection_NoVaultName(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, true)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	status := pt.getConnectionStatus()
 
@@ -158,8 +157,8 @@ func TestProfilesTitle_GetConnectionStatus_HasActiveConnection_NoVaultName(t *te
 }
 
 func TestProfilesTitle_GetConnectionStatus_Connected(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, true)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	// Note: Without proper initialization, GetActiveVault will return empty string
 	// This test verifies the logic branch
@@ -169,8 +168,8 @@ func TestProfilesTitle_GetConnectionStatus_Connected(t *testing.T) {
 }
 
 func TestProfilesTitle_GetNavigationItems_WithoutActiveConnection(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	items := pt.getNavigationItems()
 
@@ -188,8 +187,8 @@ func TestProfilesTitle_GetNavigationItems_WithoutActiveConnection(t *testing.T) 
 }
 
 func TestProfilesTitle_GetNavigationItems_WithActiveConnection(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, true)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	items := pt.getNavigationItems()
 
@@ -202,8 +201,8 @@ func TestProfilesTitle_GetNavigationItems_WithActiveConnection(t *testing.T) {
 }
 
 func TestProfilesTitle_NavigationItem_Structure(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	items := pt.getNavigationItems()
 
@@ -215,8 +214,8 @@ func TestProfilesTitle_NavigationItem_Structure(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_DifferentWidths(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	widths := []int{60, 70, 80, 90, 100, 120}
 
@@ -228,8 +227,8 @@ func TestProfilesTitle_BuildContent_DifferentWidths(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_LineCount(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 	lines := strings.Split(content, "\n")
@@ -239,8 +238,8 @@ func TestProfilesTitle_BuildContent_LineCount(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_ColorTags(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -252,8 +251,8 @@ func TestProfilesTitle_BuildContent_ColorTags(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_WithActiveConnection_HasEscKey(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, true)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, true)
 
 	content := pt.buildContent(80)
 
@@ -263,8 +262,8 @@ func TestProfilesTitle_BuildContent_WithActiveConnection_HasEscKey(t *testing.T)
 }
 
 func TestProfilesTitle_BuildContent_WithoutActiveConnection_NoEscKey(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -273,8 +272,8 @@ func TestProfilesTitle_BuildContent_WithoutActiveConnection_NoEscKey(t *testing.
 }
 
 func TestProfilesTitle_BuildContent_TwoColumnLayout(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -294,8 +293,8 @@ func TestProfilesTitle_BuildContent_TwoColumnLayout(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_ConsistentStructure(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Build content multiple times to ensure consistency
 	content1 := pt.buildContent(80)
@@ -305,8 +304,8 @@ func TestProfilesTitle_BuildContent_ConsistentStructure(t *testing.T) {
 }
 
 func TestProfilesTitle_Build_SetsDynamicColors(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	textView := pt.Build()
 
@@ -315,8 +314,8 @@ func TestProfilesTitle_Build_SetsDynamicColors(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_AllNavigationItemsVisible(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	items := pt.getNavigationItems()
 	content := pt.buildContent(80)
@@ -329,8 +328,8 @@ func TestProfilesTitle_BuildContent_AllNavigationItemsVisible(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_WithVerySmallWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Test with very small width (should be clamped to minimum)
 	content := pt.buildContent(10)
@@ -341,8 +340,8 @@ func TestProfilesTitle_BuildContent_WithVerySmallWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_WithZeroWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Test with zero width (should be clamped to minimum)
 	content := pt.buildContent(0)
@@ -352,8 +351,8 @@ func TestProfilesTitle_BuildContent_WithZeroWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_WithNegativeWidth(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Test with negative width (should be clamped to minimum)
 	content := pt.buildContent(-10)
@@ -363,17 +362,17 @@ func TestProfilesTitle_BuildContent_WithNegativeWidth(t *testing.T) {
 }
 
 func TestProfilesTitle_GetNavigationItems_Order(t *testing.T) {
-	vaultMgr := &vault.Manager{}
+	fixtures := WithFixtures(t)
 
 	// Test without active connection
-	pt1 := NewProfilesTitle(vaultMgr, false)
+	pt1 := NewProfilesTitle(fixtures.interactor, false)
 	items1 := pt1.getNavigationItems()
 
 	// First item should be navigation (not Esc)
 	assert.Equal(t, "↑/↓", items1[0].keys)
 
 	// Test with active connection
-	pt2 := NewProfilesTitle(vaultMgr, true)
+	pt2 := NewProfilesTitle(fixtures.interactor, true)
 	items2 := pt2.getNavigationItems()
 
 	// First item should be Esc
@@ -383,8 +382,8 @@ func TestProfilesTitle_GetNavigationItems_Order(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_BottomText(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 
@@ -393,8 +392,8 @@ func TestProfilesTitle_BuildContent_BottomText(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_NoEmptyLines(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 	lines := strings.Split(content, "\n")
@@ -411,8 +410,8 @@ func TestProfilesTitle_BuildContent_NoEmptyLines(t *testing.T) {
 }
 
 func TestProfilesTitle_StateIndependence(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	// Build content multiple times
 	content1 := pt.buildContent(80)
@@ -427,8 +426,8 @@ func TestProfilesTitle_StateIndependence(t *testing.T) {
 }
 
 func TestProfilesTitle_BuildContent_HelpKeyPresent(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	pt := NewProfilesTitle(vaultMgr, false)
+	fixtures := WithFixtures(t)
+	pt := NewProfilesTitle(fixtures.interactor, false)
 
 	content := pt.buildContent(80)
 

@@ -3,18 +3,19 @@ package handlers
 import (
 	"fmt"
 
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/backend"
+	"github.com/rvolykh/vui/internal/models"
 )
 
 // SecretHandler handles secret operations
 type SecretHandler struct {
-	vaultMgr *vault.Manager
+	interactor backend.Interactor
 }
 
 // NewSecretHandler creates a new secret handler
-func NewSecretHandler(vaultMgr *vault.Manager) *SecretHandler {
+func NewSecretHandler(interactor backend.Interactor) *SecretHandler {
 	return &SecretHandler{
-		vaultMgr: vaultMgr,
+		interactor: interactor,
 	}
 }
 
@@ -28,12 +29,12 @@ func (sh *SecretHandler) CreateSecret(path string, data map[string]interface{}) 
 		return fmt.Errorf("at least one key-value pair is required")
 	}
 
-	secretsManager, err := sh.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := sh.interactor.Secrets()
 	if err != nil {
 		return fmt.Errorf("failed to get secrets manager: %w", err)
 	}
 
-	if err := secretsManager.CreateSecret(path, data); err != nil {
+	if err := secretsInteractor.CreateSecret(path, data); err != nil {
 		return fmt.Errorf("failed to create secret: %w", err)
 	}
 
@@ -50,12 +51,12 @@ func (sh *SecretHandler) UpdateSecret(path string, data map[string]interface{}) 
 		return fmt.Errorf("at least one key-value pair is required")
 	}
 
-	secretsManager, err := sh.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := sh.interactor.Secrets()
 	if err != nil {
 		return fmt.Errorf("failed to get secrets manager: %w", err)
 	}
 
-	if err := secretsManager.UpdateSecret(path, data); err != nil {
+	if err := secretsInteractor.UpdateSecret(path, data); err != nil {
 		return fmt.Errorf("failed to update secret: %w", err)
 	}
 
@@ -68,12 +69,12 @@ func (sh *SecretHandler) DeleteSecret(path string) error {
 		return fmt.Errorf("secret path is required")
 	}
 
-	secretsManager, err := sh.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := sh.interactor.Secrets()
 	if err != nil {
 		return fmt.Errorf("failed to get secrets manager: %w", err)
 	}
 
-	if err := secretsManager.DeleteSecret(path); err != nil {
+	if err := secretsInteractor.DeleteSecret(path); err != nil {
 		return fmt.Errorf("failed to delete secret: %w", err)
 	}
 
@@ -81,17 +82,17 @@ func (sh *SecretHandler) DeleteSecret(path string) error {
 }
 
 // GetSecret retrieves a secret at the given path
-func (sh *SecretHandler) GetSecret(path string) (*vault.SecretNode, error) {
+func (sh *SecretHandler) GetSecret(path string) (*models.SecretNode, error) {
 	if path == "" {
 		return nil, fmt.Errorf("secret path is required")
 	}
 
-	secretsManager, err := sh.vaultMgr.GetSecretsManager()
+	secretsInteractor, err := sh.interactor.Secrets()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secrets manager: %w", err)
 	}
 
-	secret, err := secretsManager.GetSecret(path)
+	secret, err := secretsInteractor.GetSecret(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secret: %w", err)
 	}
@@ -100,13 +101,13 @@ func (sh *SecretHandler) GetSecret(path string) (*vault.SecretNode, error) {
 }
 
 // ListSecrets lists all secrets at the given path
-func (sh *SecretHandler) ListSecrets(path string) ([]*vault.SecretNode, error) {
-	secretsManager, err := sh.vaultMgr.GetSecretsManager()
+func (sh *SecretHandler) ListSecrets(path string) ([]*models.SecretNode, error) {
+	secretsInteractor, err := sh.interactor.Secrets()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secrets manager: %w", err)
 	}
 
-	secrets, err := secretsManager.ListSecrets(path)
+	secrets, err := secretsInteractor.ListSecrets(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets: %w", err)
 	}

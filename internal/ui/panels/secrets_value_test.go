@@ -4,29 +4,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSecretsValue(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
 
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	assert.NotNil(t, panel)
 	assert.True(t, panel.isMasked) // Should start masked
 }
 
 func TestSecretsValue_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
 	err := panel.Initialize()
 
 	assert.NoError(t, err)
@@ -34,14 +28,10 @@ func TestSecretsValue_Initialize(t *testing.T) {
 }
 
 func TestSecretsValue_ShowSecret(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
-
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
@@ -59,14 +49,10 @@ func TestSecretsValue_ShowSecret(t *testing.T) {
 }
 
 func TestSecretsValue_ShowKey(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
-
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
@@ -83,21 +69,17 @@ func TestSecretsValue_ShowKey(t *testing.T) {
 }
 
 func TestSecretsValue_ToggleMasking(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
-
-	secret := &vault.SecretNode{
+	secret := &models.SecretNode{
 		Name:     "test-secret",
 		Path:     "secrets/test",
 		IsSecret: true,
 		Data: map[string]interface{}{
 			"password": "secret123",
 		},
-		Metadata: &vault.SecretMetadata{
+		Metadata: &models.SecretMetadata{
 			Version:     1,
 			CreatedTime: time.Now(),
 		},
@@ -114,11 +96,8 @@ func TestSecretsValue_ToggleMasking(t *testing.T) {
 }
 
 func TestSecretsValue_ShowDirectory(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	panel.Initialize()
 
 	panel.ShowDirectory("secrets/test")
@@ -128,11 +107,8 @@ func TestSecretsValue_ShowDirectory(t *testing.T) {
 }
 
 func TestSecretsValue_FormatValue(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	vaultMgr, _ := vault.NewManager(cfg, logger)
-
-	panel := NewSecretsValue(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	panel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	tests := []struct {
 		name     string

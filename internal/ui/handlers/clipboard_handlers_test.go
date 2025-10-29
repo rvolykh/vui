@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -40,7 +40,7 @@ func TestClipboardHandler_CopyKeyValue(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		secret      *vault.SecretNode
+		secret      *models.SecretNode
 		key         string
 		expectError bool
 		expectedVal string
@@ -53,7 +53,7 @@ func TestClipboardHandler_CopyKeyValue(t *testing.T) {
 		},
 		{
 			name: "empty key",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{
@@ -65,7 +65,7 @@ func TestClipboardHandler_CopyKeyValue(t *testing.T) {
 		},
 		{
 			name: "key not found",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{
@@ -77,7 +77,7 @@ func TestClipboardHandler_CopyKeyValue(t *testing.T) {
 		},
 		{
 			name: "successful copy",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{
@@ -111,7 +111,7 @@ func TestClipboardHandler_CopySecretValues(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		secret      *vault.SecretNode
+		secret      *models.SecretNode
 		expectError bool
 		validate    func(t *testing.T, content string)
 	}{
@@ -122,7 +122,7 @@ func TestClipboardHandler_CopySecretValues(t *testing.T) {
 		},
 		{
 			name: "empty data",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{},
@@ -131,7 +131,7 @@ func TestClipboardHandler_CopySecretValues(t *testing.T) {
 		},
 		{
 			name: "single value",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{
@@ -145,7 +145,7 @@ func TestClipboardHandler_CopySecretValues(t *testing.T) {
 		},
 		{
 			name: "multiple values",
-			secret: &vault.SecretNode{
+			secret: &models.SecretNode{
 				Name: "test",
 				Path: "secrets/test",
 				Data: map[string]interface{}{

@@ -5,70 +5,25 @@ import (
 	"testing"
 
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSecretsTitle(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	assert.NotNil(t, st)
-	assert.Equal(t, cfg, st.config)
-	assert.Equal(t, vaultMgr, st.vaultMgr)
-	assert.Equal(t, logger, st.logger)
+	assert.Equal(t, fixtures.cfg, st.config)
+	assert.Equal(t, fixtures.interactor, st.interactor)
+	assert.Equal(t, fixtures.logger, st.logger)
 	assert.Nil(t, st.textView) // Not initialized yet
 }
 
-func TestNewSecretsTitle_WithNilConfig(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(nil, vaultMgr, logger)
-
-	assert.NotNil(t, st)
-	assert.Nil(t, st.config)
-}
-
-func TestNewSecretsTitle_WithNilVaultManager(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, nil, logger)
-
-	assert.NotNil(t, st)
-	assert.Nil(t, st.vaultMgr)
-}
-
-func TestNewSecretsTitle_WithNilLogger(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-
-	st := NewSecretsTitle(cfg, vaultMgr, nil)
-
-	assert.NotNil(t, st)
-	assert.Nil(t, st.logger)
-}
-
-func TestNewSecretsTitle_AllNil(t *testing.T) {
-	st := NewSecretsTitle(nil, nil, nil)
-
-	assert.NotNil(t, st)
-	assert.Nil(t, st.config)
-	assert.Nil(t, st.vaultMgr)
-	assert.Nil(t, st.logger)
-}
-
 func TestSecretsTitle_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
 	err := st.Initialize()
 
 	assert.NoError(t, err)
@@ -76,11 +31,9 @@ func TestSecretsTitle_Initialize(t *testing.T) {
 }
 
 func TestSecretsTitle_Initialize_CreatesTextView(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
 	err := st.Initialize()
 
 	assert.NoError(t, err)
@@ -92,11 +45,8 @@ func TestSecretsTitle_Initialize_CreatesTextView(t *testing.T) {
 }
 
 func TestSecretsTitle_Initialize_MultipleCallsSafe(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// Initialize multiple times should not panic
 	err1 := st.Initialize()
@@ -110,11 +60,8 @@ func TestSecretsTitle_Initialize_MultipleCallsSafe(t *testing.T) {
 }
 
 func TestSecretsTitle_GetPrimitive(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	primitive := st.GetPrimitive()
@@ -124,11 +71,8 @@ func TestSecretsTitle_GetPrimitive(t *testing.T) {
 }
 
 func TestSecretsTitle_GetPrimitive_BeforeInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	primitive := st.GetPrimitive()
 
@@ -136,10 +80,8 @@ func TestSecretsTitle_GetPrimitive_BeforeInitialize(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_NoVaultManager(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, nil, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, nil, fixtures.logger)
 
 	info := st.getVaultInfo()
 
@@ -148,27 +90,20 @@ func TestSecretsTitle_GetVaultInfo_NoVaultManager(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_NoActiveVault(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	info := st.getVaultInfo()
 
 	// GetActiveVault() returns empty string when no vault is active
-	assert.Contains(t, info, "No vault selected")
+	assert.Contains(t, info, "No profile selected")
 	assert.Contains(t, info, "[red]")
 }
 
 func TestSecretsTitle_GetVaultInfo_WithVaultNoProfile(t *testing.T) {
-	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{},
-	}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	fixtures.cfg.Vaults = map[string]config.VaultProfile{}
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// With uninitialized vault manager, GetActiveVault returns empty string
 	info := st.getVaultInfo()
@@ -177,17 +112,13 @@ func TestSecretsTitle_GetVaultInfo_WithVaultNoProfile(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_WithProfile(t *testing.T) {
-	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{
-			"test-vault": {
-				Address: "https://vault.example.com",
-			},
+	fixtures := WithFixtures(t)
+	fixtures.cfg.Vaults = map[string]config.VaultProfile{
+		"test-vault": {
+			Address: "https://vault.example.com",
 		},
 	}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// With uninitialized vault manager, GetActiveVault returns empty string
 	// so this will still return "No vault selected"
@@ -197,11 +128,8 @@ func TestSecretsTitle_GetVaultInfo_WithProfile(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_ContainsNavigationSection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -213,11 +141,8 @@ func TestSecretsTitle_UpdateHelpText_ContainsNavigationSection(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_ContainsSecretsSection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -229,11 +154,8 @@ func TestSecretsTitle_UpdateHelpText_ContainsSecretsSection(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_ContainsValuesSection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -244,11 +166,8 @@ func TestSecretsTitle_UpdateHelpText_ContainsValuesSection(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_ContainsGlobalSection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -261,11 +180,8 @@ func TestSecretsTitle_UpdateHelpText_ContainsGlobalSection(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_ContainsVaultInfo(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -274,11 +190,8 @@ func TestSecretsTitle_UpdateHelpText_ContainsVaultInfo(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateHelpText_HasColorTags(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -289,11 +202,8 @@ func TestSecretsTitle_UpdateHelpText_HasColorTags(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateVaultInfo(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	initialText := st.textView.GetText(false)
@@ -308,11 +218,8 @@ func TestSecretsTitle_UpdateVaultInfo(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateVaultInfo_UpdatesText(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	// Should not panic
@@ -323,11 +230,8 @@ func TestSecretsTitle_UpdateVaultInfo_UpdatesText(t *testing.T) {
 }
 
 func TestSecretsTitle_Initialize_TextViewHasBorder(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	// We can't directly check if border is set, but we can verify textView exists
@@ -335,11 +239,8 @@ func TestSecretsTitle_Initialize_TextViewHasBorder(t *testing.T) {
 }
 
 func TestSecretsTitle_Initialize_TextViewHasTitle(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	// The title should be "Navigation & Controls"
@@ -348,11 +249,8 @@ func TestSecretsTitle_Initialize_TextViewHasTitle(t *testing.T) {
 }
 
 func TestSecretsTitle_HelpText_FormattedInColumns(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -376,29 +274,23 @@ func TestSecretsTitle_HelpText_FormattedInColumns(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_ColorCoding(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// With nil vault manager
-	st.vaultMgr = nil
+	st.interactor = nil
 	info := st.getVaultInfo()
 	assert.Contains(t, info, "[red]", "No connection should be red")
 
 	// With vault manager but no active vault
-	st.vaultMgr = &vault.Manager{}
+	st.interactor = fixtures.interactor
 	info = st.getVaultInfo()
 	assert.Contains(t, info, "[red]", "No vault selected should be red")
 }
 
 func TestSecretsTitle_AllKeybindings_Present(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -425,11 +317,8 @@ func TestSecretsTitle_AllKeybindings_Present(t *testing.T) {
 }
 
 func TestSecretsTitle_TextNotEmpty_AfterInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -439,11 +328,8 @@ func TestSecretsTitle_TextNotEmpty_AfterInitialize(t *testing.T) {
 }
 
 func TestSecretsTitle_ConsistentOutput(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text1 := st.textView.GetText(false)
@@ -458,10 +344,8 @@ func TestSecretsTitle_ConsistentOutput(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_NilConfig(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(nil, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(nil, fixtures.interactor, fixtures.logger)
 
 	// Should not panic with nil config
 	info := st.getVaultInfo()
@@ -470,10 +354,8 @@ func TestSecretsTitle_GetVaultInfo_NilConfig(t *testing.T) {
 }
 
 func TestSecretsTitle_Initialize_WithNilVaultManager(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, nil, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, nil, fixtures.logger)
 	err := st.Initialize()
 
 	assert.NoError(t, err)
@@ -484,13 +366,9 @@ func TestSecretsTitle_Initialize_WithNilVaultManager(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_EmptyVaultsMap(t *testing.T) {
-	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{},
-	}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	fixtures.cfg.Vaults = map[string]config.VaultProfile{}
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	info := st.getVaultInfo()
 
@@ -498,11 +376,8 @@ func TestSecretsTitle_GetVaultInfo_EmptyVaultsMap(t *testing.T) {
 }
 
 func TestSecretsTitle_TextContains_AllSectionHeaders(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	st.Initialize()
 
 	text := st.textView.GetText(false)
@@ -515,11 +390,8 @@ func TestSecretsTitle_TextContains_AllSectionHeaders(t *testing.T) {
 }
 
 func TestSecretsTitle_UpdateVaultInfo_BeforeInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// Calling UpdateVaultInfo before Initialize will panic because textView is nil
 	// This is expected behavior - Initialize must be called first
@@ -527,17 +399,13 @@ func TestSecretsTitle_UpdateVaultInfo_BeforeInitialize(t *testing.T) {
 }
 
 func TestSecretsTitle_GetVaultInfo_WithAddress(t *testing.T) {
-	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{
-			"prod": {
-				Address: "https://vault.prod.example.com",
-			},
+	fixtures := WithFixtures(t)
+	fixtures.cfg.Vaults = map[string]config.VaultProfile{
+		"prod": {
+			Address: "https://vault.prod.example.com",
 		},
 	}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	st := NewSecretsTitle(cfg, vaultMgr, logger)
+	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// Since GetActiveVault returns empty string, this won't show the address
 	// but the code path exists
