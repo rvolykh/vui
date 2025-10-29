@@ -6,20 +6,20 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/ui/common"
-	"github.com/rvolykh/vui/internal/vault"
 )
 
 // ProfilesTitle represents the welcome/connection screen
 type ProfilesTitle struct {
-	vaultMgr      *vault.Manager
+	interactor    backend.Interactor
 	hasActiveConn bool
 }
 
 // NewProfilesTitle creates a new welcome screen
-func NewProfilesTitle(vaultMgr *vault.Manager, hasActiveConnection bool) *ProfilesTitle {
+func NewProfilesTitle(interactor backend.Interactor, hasActiveConnection bool) *ProfilesTitle {
 	return &ProfilesTitle{
-		vaultMgr:      vaultMgr,
+		interactor:    interactor,
 		hasActiveConn: hasActiveConnection,
 	}
 }
@@ -134,7 +134,7 @@ func (ws *ProfilesTitle) buildContent(width int) string {
 // getConnectionStatus returns the formatted connection status string
 func (ws *ProfilesTitle) getConnectionStatus() string {
 	if ws.hasActiveConn {
-		activeVault := ws.vaultMgr.GetActiveVault()
+		activeVault := ws.interactor.Profiles().GetCurrentProfile()
 		if activeVault != "" {
 			return fmt.Sprintf("[green]Connected:[white] %s", activeVault)
 		}

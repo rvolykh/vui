@@ -5,37 +5,28 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
-	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewProfilesTable(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	assert.NotNil(t, pt)
-	assert.Equal(t, cfg, pt.config)
-	assert.Equal(t, vaultMgr, pt.vaultMgr)
-	assert.Equal(t, app, pt.app)
-	assert.Equal(t, logger, pt.logger)
+	assert.Equal(t, fixtures.cfg, pt.config)
+	assert.Equal(t, fixtures.interactor, pt.interactor)
+	assert.Equal(t, fixtures.app, pt.app)
+	assert.Equal(t, fixtures.logger, pt.logger)
 	assert.NotNil(t, pt.stopRefresh)
 	assert.Nil(t, pt.table)
 }
 
 func TestProfilesTable_SetSuccessCallback(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	callbackCalled := false
 	callback := func() {
@@ -52,12 +43,9 @@ func TestProfilesTable_SetSuccessCallback(t *testing.T) {
 }
 
 func TestProfilesTable_SetSuccessCallback_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	// Should not panic with nil callback
 	pt.SetSuccessCallback(nil)
@@ -66,12 +54,9 @@ func TestProfilesTable_SetSuccessCallback_Nil(t *testing.T) {
 }
 
 func TestProfilesTable_SetErrorCallback(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	callbackCalled := false
 	var receivedError string
@@ -91,12 +76,9 @@ func TestProfilesTable_SetErrorCallback(t *testing.T) {
 }
 
 func TestProfilesTable_SetErrorCallback_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	// Should not panic with nil callback
 	pt.SetErrorCallback(nil)
@@ -105,12 +87,9 @@ func TestProfilesTable_SetErrorCallback_Nil(t *testing.T) {
 }
 
 func TestProfilesTable_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	err := pt.Initialize()
 
@@ -121,12 +100,9 @@ func TestProfilesTable_Initialize(t *testing.T) {
 }
 
 func TestProfilesTable_StopRefresher(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	// Should not panic
 	pt.StopRefresher()
@@ -136,12 +112,9 @@ func TestProfilesTable_StopRefresher(t *testing.T) {
 }
 
 func TestProfilesTable_StopRefresher_WithNilChannel(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.stopRefresh = nil
 
 	// Should not panic with nil channel
@@ -149,12 +122,9 @@ func TestProfilesTable_StopRefresher_WithNilChannel(t *testing.T) {
 }
 
 func TestProfilesTable_StopRefresher_AfterInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Give goroutine time to start
@@ -168,12 +138,9 @@ func TestProfilesTable_StopRefresher_AfterInitialize(t *testing.T) {
 }
 
 func TestProfilesTable_HasConnectingProfiles_NoProfiles(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	// With uninitialized vault manager, should return false
 	result := pt.hasConnectingProfiles()
@@ -181,12 +148,9 @@ func TestProfilesTable_HasConnectingProfiles_NoProfiles(t *testing.T) {
 }
 
 func TestProfilesTable_GetPrimitive(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	primitive := pt.GetPrimitive()
@@ -196,12 +160,9 @@ func TestProfilesTable_GetPrimitive(t *testing.T) {
 }
 
 func TestProfilesTable_GetPrimitive_BeforeInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	primitive := pt.GetPrimitive()
 
@@ -209,16 +170,12 @@ func TestProfilesTable_GetPrimitive_BeforeInitialize(t *testing.T) {
 }
 
 func TestProfilesTable_FormatStatus_Connecting(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
-	status := &vault.ConnectionStatus{
-		Connecting: true,
-		Connected:  false,
+	status := &models.ConnectionStatus{
+		Status: models.StatusConnecting,
 	}
 
 	text, color := pt.formatStatus(status)
@@ -228,17 +185,12 @@ func TestProfilesTable_FormatStatus_Connecting(t *testing.T) {
 }
 
 func TestProfilesTable_FormatStatus_ConnectedAndSealed(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
-	status := &vault.ConnectionStatus{
-		Connecting: false,
-		Connected:  true,
-		Sealed:     true,
+	status := &models.ConnectionStatus{
+		Status: models.StatusSealed,
 	}
 
 	text, color := pt.formatStatus(status)
@@ -248,17 +200,12 @@ func TestProfilesTable_FormatStatus_ConnectedAndSealed(t *testing.T) {
 }
 
 func TestProfilesTable_FormatStatus_ConnectedAndUnsealed(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
-	status := &vault.ConnectionStatus{
-		Connecting: false,
-		Connected:  true,
-		Sealed:     false,
+	status := &models.ConnectionStatus{
+		Status: models.StatusConnected,
 	}
 
 	text, color := pt.formatStatus(status)
@@ -268,16 +215,12 @@ func TestProfilesTable_FormatStatus_ConnectedAndUnsealed(t *testing.T) {
 }
 
 func TestProfilesTable_FormatStatus_Disconnected(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
-	status := &vault.ConnectionStatus{
-		Connecting: false,
-		Connected:  false,
+	status := &models.ConnectionStatus{
+		Status: models.StatusDisconnected,
 	}
 
 	text, color := pt.formatStatus(status)
@@ -287,12 +230,9 @@ func TestProfilesTable_FormatStatus_Disconnected(t *testing.T) {
 }
 
 func TestProfilesTable_LoadProfiles_NoVaults(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	err := pt.loadProfiles()
@@ -304,12 +244,9 @@ func TestProfilesTable_LoadProfiles_NoVaults(t *testing.T) {
 }
 
 func TestProfilesTable_Refresh(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Should not panic
@@ -317,12 +254,9 @@ func TestProfilesTable_Refresh(t *testing.T) {
 }
 
 func TestProfilesTable_Refresh_BeforeInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	// Calling Refresh before Initialize will panic because table is nil
 	// This is expected behavior - Initialize must be called first
@@ -330,12 +264,9 @@ func TestProfilesTable_Refresh_BeforeInitialize(t *testing.T) {
 }
 
 func TestProfilesTable_SetupKeyboardNavigation(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Verify that keyboard navigation is set up (table should have input capture)
@@ -343,12 +274,9 @@ func TestProfilesTable_SetupKeyboardNavigation(t *testing.T) {
 }
 
 func TestProfilesTable_SwitchToSelectedVault_NoSelection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Should not panic with no valid selection
@@ -356,12 +284,9 @@ func TestProfilesTable_SwitchToSelectedVault_NoSelection(t *testing.T) {
 }
 
 func TestProfilesTable_SwitchToSelectedVault_HeaderRow(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 	pt.table.Select(0, 0) // Select header row
 
@@ -370,12 +295,9 @@ func TestProfilesTable_SwitchToSelectedVault_HeaderRow(t *testing.T) {
 }
 
 func TestProfilesTable_AddNewVault(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Should not panic (currently not implemented)
@@ -383,12 +305,9 @@ func TestProfilesTable_AddNewVault(t *testing.T) {
 }
 
 func TestProfilesTable_DeleteSelectedVault_NoSelection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Should not panic with no valid selection
@@ -396,12 +315,9 @@ func TestProfilesTable_DeleteSelectedVault_NoSelection(t *testing.T) {
 }
 
 func TestProfilesTable_DeleteSelectedVault_HeaderRow(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 	pt.table.Select(0, 0) // Select header row
 
@@ -409,57 +325,10 @@ func TestProfilesTable_DeleteSelectedVault_HeaderRow(t *testing.T) {
 	pt.deleteSelectedVault()
 }
 
-func TestProfilesTable_NewWithNilConfig(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
-
-	pt := NewProfilesTable(nil, vaultMgr, app, logger)
-
-	assert.NotNil(t, pt)
-	assert.Nil(t, pt.config)
-}
-
-func TestProfilesTable_NewWithNilVaultManager(t *testing.T) {
-	cfg := &config.Config{}
-	app := tview.NewApplication()
-	logger := logrus.New()
-
-	pt := NewProfilesTable(cfg, nil, app, logger)
-
-	assert.NotNil(t, pt)
-	assert.Nil(t, pt.vaultMgr)
-}
-
-func TestProfilesTable_NewWithNilApp(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-
-	pt := NewProfilesTable(cfg, vaultMgr, nil, logger)
-
-	assert.NotNil(t, pt)
-	assert.Nil(t, pt.app)
-}
-
-func TestProfilesTable_NewWithNilLogger(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-
-	pt := NewProfilesTable(cfg, vaultMgr, app, nil)
-
-	assert.NotNil(t, pt)
-	assert.Nil(t, pt.logger)
-}
-
 func TestProfilesTable_LoadProfiles_PreservesSelection(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// First load
@@ -470,17 +339,13 @@ func TestProfilesTable_LoadProfiles_PreservesSelection(t *testing.T) {
 }
 
 func TestProfilesTable_FormatStatus_WithError(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
-	status := &vault.ConnectionStatus{
-		Connecting: false,
-		Connected:  false,
-		Error:      "connection refused",
+	status := &models.ConnectionStatus{
+		Status: models.StatusDisconnected,
+		Error:  "connection refused",
 	}
 
 	text, color := pt.formatStatus(status)
@@ -490,12 +355,9 @@ func TestProfilesTable_FormatStatus_WithError(t *testing.T) {
 }
 
 func TestProfilesTable_EnsureRefresherRunning(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Should not panic
@@ -510,18 +372,15 @@ func TestProfilesTable_EnsureRefresherRunning(t *testing.T) {
 }
 
 func TestProfilesTable_RefreshProfiles(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// refreshProfiles() requires a fully initialized vault manager with connection manager
 	// Testing this requires more complex setup, so we just verify the method exists
 	// The actual functionality is tested through integration tests
-	assert.NotNil(t, pt.vaultMgr)
+	assert.NotNil(t, pt.interactor)
 
 	// Clean up
 	pt.StopRefresher()
@@ -529,12 +388,9 @@ func TestProfilesTable_RefreshProfiles(t *testing.T) {
 }
 
 func TestProfilesTable_KeyboardNavigation_Enter(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Simulate Enter key press (should trigger switchToSelectedVault)
@@ -543,12 +399,9 @@ func TestProfilesTable_KeyboardNavigation_Enter(t *testing.T) {
 }
 
 func TestProfilesTable_VaultNamesInitialization(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// vaultNames should be initialized (even if empty)
@@ -556,12 +409,9 @@ func TestProfilesTable_VaultNamesInitialization(t *testing.T) {
 }
 
 func TestProfilesTable_MultipleRefreshCycles(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 	pt.Initialize()
 
 	// Multiple refresh cycles should not panic
@@ -574,12 +424,9 @@ func TestProfilesTable_MultipleRefreshCycles(t *testing.T) {
 }
 
 func TestProfilesTable_CallbacksIntegration(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	pt := NewProfilesTable(cfg, vaultMgr, app, logger)
+	pt := NewProfilesTable(fixtures.cfg, fixtures.interactor, fixtures.app, fixtures.logger)
 
 	successCalled := false
 	errorCalled := false

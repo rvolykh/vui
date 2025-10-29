@@ -4,19 +4,21 @@ import (
 	"testing"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormsManager_EditSecretForm_WithGetSecretError(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	callback := func() {
 		// Callback for testing
@@ -35,11 +37,12 @@ func TestFormsManager_EditSecretForm_WithGetSecretError(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_WithEmptyPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Empty path should cause GetSecret to fail
 	primitive := fm.EditSecretForm("", func() {})
@@ -52,11 +55,12 @@ func TestFormsManager_EditSecretForm_WithEmptyPath(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_WithNilCallback(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Should not panic with nil callback
 	primitive := fm.EditSecretForm("/secret/test", nil)
@@ -66,11 +70,12 @@ func TestFormsManager_EditSecretForm_WithNilCallback(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_MultipleInvocations(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Create multiple edit forms
 	form1 := fm.EditSecretForm("/secret/path1", func() {})
@@ -82,11 +87,12 @@ func TestFormsManager_EditSecretForm_MultipleInvocations(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_WithLongPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	longPath := "/secret/very/long/path/to/secret/that/needs/to/be/edited"
 	primitive := fm.EditSecretForm(longPath, func() {})
@@ -96,11 +102,12 @@ func TestFormsManager_EditSecretForm_WithLongPath(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_WithSpecialCharactersInPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	specialPath := "/secret/test-secret_123/item.name"
 	primitive := fm.EditSecretForm(specialPath, func() {})
@@ -110,11 +117,12 @@ func TestFormsManager_EditSecretForm_WithSpecialCharactersInPath(t *testing.T) {
 
 func TestFormsManager_EditSecretForm_ReturnsErrorModalOnFailure(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Since vault is not initialized, GetSecret will fail
 	primitive := fm.EditSecretForm("/secret/test", func() {})

@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	"github.com/atotto/clipboard"
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/backend"
+	"github.com/rvolykh/vui/internal/models"
 )
 
 // ClipboardWriter is an interface for writing to clipboard (for testing)
@@ -23,28 +24,28 @@ func (rc *RealClipboard) WriteAll(text string) error {
 
 // ClipboardHandler handles clipboard operations
 type ClipboardHandler struct {
-	vaultMgr *vault.Manager
-	writer   ClipboardWriter
+	interactor backend.Interactor
+	writer     ClipboardWriter
 }
 
 // NewClipboardHandler creates a new clipboard handler with the real clipboard
-func NewClipboardHandler(vaultMgr *vault.Manager) *ClipboardHandler {
+func NewClipboardHandler(interactor backend.Interactor) *ClipboardHandler {
 	return &ClipboardHandler{
-		vaultMgr: vaultMgr,
-		writer:   &RealClipboard{},
+		interactor: interactor,
+		writer:     &RealClipboard{},
 	}
 }
 
 // NewClipboardHandlerWithWriter creates a clipboard handler with a custom writer (for testing)
-func NewClipboardHandlerWithWriter(vaultMgr *vault.Manager, writer ClipboardWriter) *ClipboardHandler {
+func NewClipboardHandlerWithWriter(interactor backend.Interactor, writer ClipboardWriter) *ClipboardHandler {
 	return &ClipboardHandler{
-		vaultMgr: vaultMgr,
-		writer:   writer,
+		interactor: interactor,
+		writer:     writer,
 	}
 }
 
 // CopyKeyValue copies a specific key's value from a secret to clipboard
-func (ch *ClipboardHandler) CopyKeyValue(secret *vault.SecretNode, key string) error {
+func (ch *ClipboardHandler) CopyKeyValue(secret *models.SecretNode, key string) error {
 	if secret == nil {
 		return fmt.Errorf("secret is nil")
 	}
@@ -55,12 +56,12 @@ func (ch *ClipboardHandler) CopyKeyValue(secret *vault.SecretNode, key string) e
 
 	// Get the full secret data if not already loaded
 	if secret.Data == nil {
-		secretsManager, err := ch.vaultMgr.GetSecretsManager()
+		secretsInteractor, err := ch.interactor.Secrets()
 		if err != nil {
 			return fmt.Errorf("failed to get secrets manager: %w", err)
 		}
 
-		fullSecret, err := secretsManager.GetSecret(secret.Path)
+		fullSecret, err := secretsInteractor.GetSecret(secret.Path)
 		if err != nil {
 			return fmt.Errorf("failed to get secret: %w", err)
 		}
@@ -83,19 +84,19 @@ func (ch *ClipboardHandler) CopyKeyValue(secret *vault.SecretNode, key string) e
 // CopySecretValues copies all values from a secret to clipboard
 // If there's only one value, copies just that value
 // If there are multiple values, copies them one per line
-func (ch *ClipboardHandler) CopySecretValues(secret *vault.SecretNode) error {
+func (ch *ClipboardHandler) CopySecretValues(secret *models.SecretNode) error {
 	if secret == nil {
 		return fmt.Errorf("secret is nil")
 	}
 
 	// Get the full secret data if not already loaded
 	if secret.Data == nil {
-		secretsManager, err := ch.vaultMgr.GetSecretsManager()
+		secretsInteractor, err := ch.interactor.Secrets()
 		if err != nil {
 			return fmt.Errorf("failed to get secrets manager: %w", err)
 		}
 
-		fullSecret, err := secretsManager.GetSecret(secret.Path)
+		fullSecret, err := secretsInteractor.GetSecret(secret.Path)
 		if err != nil {
 			return fmt.Errorf("failed to get secret: %w", err)
 		}

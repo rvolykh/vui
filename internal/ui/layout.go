@@ -4,17 +4,18 @@ import (
 	"fmt"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/rvolykh/vui/internal/ui/common"
 	"github.com/rvolykh/vui/internal/ui/panels"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // Layout represents the main application layout
 type Layout struct {
 	config        *config.Config
-	vaultMgr      *vault.Manager
+	interactor    backend.Interactor
 	root          *tview.Flex
 	helpPanel     *panels.SecretsTitle
 	treePanel     *panels.SecretsTree
@@ -27,11 +28,11 @@ type Layout struct {
 }
 
 // NewLayout creates a new layout
-func NewLayout(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *Layout {
+func NewLayout(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *Layout {
 	return &Layout{
-		config:   config,
-		vaultMgr: vaultMgr,
-		logger:   logger,
+		config:     config,
+		interactor: interactor,
+		logger:     logger,
 	}
 }
 
@@ -45,31 +46,31 @@ func (l *Layout) Initialize() error {
 	l.logger.Info("Initializing UI layout")
 
 	// Create the help panel
-	l.helpPanel = panels.NewSecretsTitle(l.config, l.vaultMgr, l.logger)
+	l.helpPanel = panels.NewSecretsTitle(l.config, l.interactor, l.logger)
 	if err := l.helpPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize help panel: %w", err)
 	}
 
 	// Create the tree panel
-	l.treePanel = panels.NewSecretsTree(l.config, l.vaultMgr, l.logger, l.app)
+	l.treePanel = panels.NewSecretsTree(l.config, l.interactor, l.logger, l.app)
 	if err := l.treePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize tree panel: %w", err)
 	}
 
 	// Create the metadata panel
-	l.metadataPanel = panels.NewSecretsMetadata(l.config, l.vaultMgr, l.logger)
+	l.metadataPanel = panels.NewSecretsMetadata(l.config, l.interactor, l.logger)
 	if err := l.metadataPanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize metadata panel: %w", err)
 	}
 
 	// Create the value panel
-	l.valuePanel = panels.NewSecretsValue(l.config, l.vaultMgr, l.logger)
+	l.valuePanel = panels.NewSecretsValue(l.config, l.interactor, l.logger)
 	if err := l.valuePanel.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize value panel: %w", err)
 	}
 
 	// Create the status bar
-	l.statusBar = panels.NewSecretsStatus(l.config, l.vaultMgr, l.logger)
+	l.statusBar = panels.NewSecretsStatus(l.config, l.interactor, l.logger)
 	if err := l.statusBar.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize status bar: %w", err)
 	}
@@ -117,20 +118,20 @@ func (l *Layout) setupLayout() {
 // setupEventHandlers sets up event handlers between components
 func (l *Layout) setupEventHandlers() {
 	// When a tree item is selected, update the metadata and value panels
-	l.treePanel.SetSelectionHandler(func(node *vault.SecretNode, selectedKey string) {
+	l.treePanel.SetSelectionHandler(func(node *models.SecretNode, selectedKey string) {
 		l.logger.Infof("Selection changed: path=%s, isSecret=%v, key=%s", node.Path, node.IsSecret, selectedKey)
 
 		if selectedKey != "" {
 			// A specific key within a secret is selected
 			// We need to fetch the full secret data to show the key's value
-			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			secretsInteractor, err := l.interactor.Secrets()
 			if err != nil {
 				l.logger.Errorf("Failed to get secrets manager: %v", err)
 				return
 			}
 
 			// Get the full secret data
-			secret, err := secretsManager.GetSecret(node.Path)
+			secret, err := secretsInteractor.GetSecret(node.Path)
 			if err != nil {
 				l.logger.Errorf("Failed to get secret: %v", err)
 				return
@@ -141,7 +142,7 @@ func (l *Layout) setupEventHandlers() {
 			l.statusBar.UpdateSelection(fmt.Sprintf("%s/%s", node.Path, selectedKey), true)
 		} else if node.IsSecret {
 			// A secret is selected (but not a specific key)
-			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			secretsManager, err := l.interactor.Secrets()
 			if err != nil {
 				l.logger.Errorf("Failed to get secrets manager: %v", err)
 				return
@@ -159,17 +160,17 @@ func (l *Layout) setupEventHandlers() {
 			l.statusBar.UpdateSelection(node.Path, true)
 		} else {
 			// A directory is selected
-			secretsManager, err := l.vaultMgr.GetSecretsManager()
+			secretsInteractor, err := l.interactor.Secrets()
 			if err != nil {
 				l.logger.Errorf("Failed to get secrets manager: %v", err)
 				return
 			}
 
 			// Get directory contents to count items
-			secrets, err := secretsManager.ListSecrets(node.Path)
+			secrets, err := secretsInteractor.ListSecrets(node.Path)
 			if err != nil {
 				l.logger.Errorf("Failed to list secrets: %v", err)
-				secrets = []*vault.SecretNode{}
+				secrets = []*models.SecretNode{}
 			}
 
 			l.metadataPanel.ShowDirectory(node.Path, len(secrets))

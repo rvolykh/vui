@@ -4,19 +4,21 @@ import (
 	"testing"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormsManager_CreateSecretForm(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	callbackCalled := false
 	callback := func() {
@@ -31,11 +33,12 @@ func TestFormsManager_CreateSecretForm(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_WithEmptyBasePath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.CreateSecretForm("", func() {})
 
@@ -44,11 +47,12 @@ func TestFormsManager_CreateSecretForm_WithEmptyBasePath(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_WithNilCallback(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Should not panic with nil callback
 	primitive := fm.CreateSecretForm("/secret/base", nil)
@@ -58,11 +62,12 @@ func TestFormsManager_CreateSecretForm_WithNilCallback(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_PathInitialization(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	basePath := "/secret/myapp"
 	primitive := fm.CreateSecretForm(basePath, func() {})
@@ -75,11 +80,12 @@ func TestFormsManager_CreateSecretForm_PathInitialization(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_ReturnsFlexContainer(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.CreateSecretForm("/secret/test", func() {})
 
@@ -91,11 +97,12 @@ func TestFormsManager_CreateSecretForm_ReturnsFlexContainer(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_WithTrailingSlash(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.CreateSecretForm("/secret/base/", func() {})
 
@@ -104,11 +111,12 @@ func TestFormsManager_CreateSecretForm_WithTrailingSlash(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_WithoutTrailingSlash(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.CreateSecretForm("/secret/base", func() {})
 
@@ -117,11 +125,12 @@ func TestFormsManager_CreateSecretForm_WithoutTrailingSlash(t *testing.T) {
 
 func TestFormsManager_CreateSecretForm_MultipleInvocations(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Create multiple forms
 	form1 := fm.CreateSecretForm("/secret/path1", func() {})

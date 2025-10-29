@@ -5,17 +5,17 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/ui/common"
 	"github.com/rvolykh/vui/internal/ui/panels"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // App represents the UI application
 type App struct {
 	config              *config.Config
-	vaultMgr            *vault.Manager
+	interactor          backend.Interactor
 	uiApp               *tview.Application
 	layout              *Layout
 	logger              *logrus.Logger
@@ -26,26 +26,26 @@ type App struct {
 }
 
 // NewApp creates a new UI application
-func NewApp(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *App {
+func NewApp(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *App {
 	// Initialize theme
 	common.InitializeTheme(config.UI.Theme)
 
 	uiApp := tview.NewApplication()
 
 	// Create the main layout
-	layout := NewLayout(config, vaultMgr, logger)
+	layout := NewLayout(config, interactor, logger)
 	layout.SetApplication(uiApp)
 
 	// Create dialog service
 	dialogSvc := common.NewDialogService(uiApp, nil) // Root will be set later
 
 	return &App{
-		config:    config,
-		vaultMgr:  vaultMgr,
-		uiApp:     uiApp,
-		layout:    layout,
-		logger:    logger,
-		dialogSvc: dialogSvc,
+		config:     config,
+		interactor: interactor,
+		uiApp:      uiApp,
+		layout:     layout,
+		logger:     logger,
+		dialogSvc:  dialogSvc,
 	}
 }
 
@@ -218,7 +218,7 @@ func (a *App) showVaultProfiles() {
 	a.onProfilesScreen = true
 
 	// Create vault profiles panel
-	profilesPanel := panels.NewProfilesTable(a.config, a.vaultMgr, a.uiApp, a.logger)
+	profilesPanel := panels.NewProfilesTable(a.config, a.interactor, a.uiApp, a.logger)
 	if err := profilesPanel.Initialize(); err != nil {
 		a.logger.Errorf("Failed to initialize vault profiles panel: %v", err)
 		a.showError("Failed to initialize vault profiles")
@@ -297,9 +297,9 @@ func (a *App) showVaultProfiles() {
 // showError displays an error message
 func (a *App) showError(message string) {
 	modal := common.ErrorModal(message, func() {
-		// Go back to vault profiles if no connected vaults
-		connectedVaults := a.vaultMgr.GetConnectedConnections()
-		if len(connectedVaults) == 0 {
+		// Go back to vault profiles if no connected to profile
+		currentProfile := a.interactor.Profiles().GetCurrentProfile()
+		if currentProfile == "" {
 			a.showVaultProfiles()
 		} else {
 			a.currentRoot = a.layout.GetRoot()
@@ -337,6 +337,6 @@ func (a *App) GetLayout() *Layout {
 
 // buildWelcomeText creates a formatted welcome panel with connection status and navigation info
 func (a *App) buildWelcomeText() *tview.TextView {
-	welcomeScreen := panels.NewProfilesTitle(a.vaultMgr, a.hasActiveConnection)
+	welcomeScreen := panels.NewProfilesTitle(a.interactor, a.hasActiveConnection)
 	return welcomeScreen.Build()
 }

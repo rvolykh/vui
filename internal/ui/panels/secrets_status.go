@@ -5,25 +5,26 @@ import (
 	"time"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/sirupsen/logrus"
 )
 
 // SecretsStatus represents the status bar
 type SecretsStatus struct {
-	config   *config.Config
-	vaultMgr *vault.Manager
-	textView *tview.TextView
-	logger   *logrus.Logger
+	config     *config.Config
+	interactor backend.Interactor
+	textView   *tview.TextView
+	logger     *logrus.Logger
 }
 
 // NewSecretsStatus creates a new status bar
-func NewSecretsStatus(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsStatus {
+func NewSecretsStatus(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *SecretsStatus {
 	return &SecretsStatus{
-		config:   config,
-		vaultMgr: vaultMgr,
-		logger:   logger,
+		config:     config,
+		interactor: interactor,
+		logger:     logger,
 	}
 }
 
@@ -46,10 +47,10 @@ func (sb *SecretsStatus) Initialize() error {
 // UpdateConnectionStatus updates the connection status
 func (sb *SecretsStatus) UpdateConnectionStatus() {
 	// Get active vault
-	activeVault := sb.vaultMgr.GetActiveVault()
+	activeVault := sb.interactor.Profiles().GetCurrentProfile()
 
 	// Get connection status
-	status, err := sb.vaultMgr.GetConnectionStatus(activeVault)
+	status, err := sb.interactor.Profiles().GetConnectionStatus(activeVault)
 	if err != nil {
 		sb.updateStatus(fmt.Sprintf("[red]Error: %v[white]", err))
 		return
@@ -57,8 +58,8 @@ func (sb *SecretsStatus) UpdateConnectionStatus() {
 
 	// Format status
 	var statusText string
-	if status.Connected {
-		if status.Sealed {
+	if status.Status == models.StatusConnected {
+		if status.Status == models.StatusSealed {
 			statusText = fmt.Sprintf("[yellow]Vault: %s (Sealed)[white]", activeVault)
 		} else {
 			statusText = fmt.Sprintf("[green]Vault: %s (Connected)[white]", activeVault)

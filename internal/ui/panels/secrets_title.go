@@ -4,25 +4,25 @@ import (
 	"fmt"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // SecretsTitle represents the navigation secrets title
 type SecretsTitle struct {
-	config   *config.Config
-	vaultMgr *vault.Manager
-	textView *tview.TextView
-	logger   *logrus.Logger
+	config     *config.Config
+	interactor backend.Interactor
+	textView   *tview.TextView
+	logger     *logrus.Logger
 }
 
 // NewSecretsTitle creates a new secrets title
-func NewSecretsTitle(config *config.Config, vaultMgr *vault.Manager, logger *logrus.Logger) *SecretsTitle {
+func NewSecretsTitle(config *config.Config, interactor backend.Interactor, logger *logrus.Logger) *SecretsTitle {
 	return &SecretsTitle{
-		config:   config,
-		vaultMgr: vaultMgr,
-		logger:   logger,
+		config:     config,
+		interactor: interactor,
+		logger:     logger,
 	}
 }
 
@@ -63,16 +63,16 @@ func (hp *SecretsTitle) updateHelpText() {
 
 // getVaultInfo returns the current vault connection information
 func (hp *SecretsTitle) getVaultInfo() string {
-	if hp.vaultMgr == nil {
+	if hp.interactor == nil {
 		return "[red]No connection[white]"
 	}
 
-	currentVault := hp.vaultMgr.GetActiveVault()
+	currentVault := hp.interactor.Profiles().GetCurrentProfile()
 	if currentVault == "" {
-		return "[red]No vault selected[white]"
+		return "[red]No profile selected[white]"
 	}
 
-	// Get vault profile for address
+	// Get profile for address
 	if profile, ok := hp.config.Vaults[currentVault]; ok {
 		return fmt.Sprintf("[green]%s[white] (%s)", currentVault, profile.Address)
 	}

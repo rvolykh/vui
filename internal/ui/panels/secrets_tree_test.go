@@ -4,25 +4,20 @@ import (
 	"testing"
 
 	"github.com/rivo/tview"
-	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
-	"github.com/sirupsen/logrus"
+	"github.com/rvolykh/vui/internal/models"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewSecretsTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	assert.NotNil(t, st)
-	assert.Equal(t, cfg, st.config)
-	assert.Equal(t, vaultMgr, st.vaultMgr)
-	assert.Equal(t, logger, st.logger)
-	assert.Equal(t, app, st.app)
+	assert.Equal(t, fixtures.cfg, st.config)
+	assert.Equal(t, fixtures.interactor, st.interactor)
+	assert.Equal(t, fixtures.logger, st.logger)
+	assert.Equal(t, fixtures.app, st.app)
 	assert.NotNil(t, st.formsMgr)
 	assert.NotNil(t, st.clipboardHandler)
 	assert.Nil(t, st.tree) // Not initialized yet
@@ -30,56 +25,45 @@ func TestNewSecretsTree(t *testing.T) {
 }
 
 func TestNewSecretsTree_WithNilConfig(t *testing.T) {
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTree(nil, vaultMgr, logger, app)
+	st := NewSecretsTree(nil, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	assert.NotNil(t, st)
 	assert.Nil(t, st.config)
 }
 
 func TestNewSecretsTree_WithNilVaultManager(t *testing.T) {
-	cfg := &config.Config{}
-	logger := logrus.New()
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTree(cfg, nil, logger, app)
+	st := NewSecretsTree(fixtures.cfg, nil, fixtures.logger, fixtures.app)
 
 	assert.NotNil(t, st)
-	assert.Nil(t, st.vaultMgr)
+	assert.Nil(t, st.interactor)
 }
 
 func TestNewSecretsTree_WithNilLogger(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTree(cfg, vaultMgr, nil, app)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, nil, fixtures.app)
 
 	assert.NotNil(t, st)
 	assert.Nil(t, st.logger)
 }
 
 func TestNewSecretsTree_WithNilApp(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
+	fixtures := WithFixtures(t)
 
-	st := NewSecretsTree(cfg, vaultMgr, logger, nil)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, nil)
 
 	assert.NotNil(t, st)
 	assert.Nil(t, st.app)
 }
 
 func TestSecretsTree_Initialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
 	err := st.Initialize()
 
 	assert.NoError(t, err)
@@ -88,12 +72,9 @@ func TestSecretsTree_Initialize(t *testing.T) {
 }
 
 func TestSecretsTree_Initialize_CreatesTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
 	err := st.Initialize()
 
 	assert.NoError(t, err)
@@ -105,12 +86,8 @@ func TestSecretsTree_Initialize_CreatesTree(t *testing.T) {
 }
 
 func TestSecretsTree_Initialize_MultipleCallsSafe(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Initialize multiple times should not panic
 	err1 := st.Initialize()
@@ -124,12 +101,8 @@ func TestSecretsTree_Initialize_MultipleCallsSafe(t *testing.T) {
 }
 
 func TestSecretsTree_GetPrimitive(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	primitive := st.GetPrimitive()
@@ -139,12 +112,8 @@ func TestSecretsTree_GetPrimitive(t *testing.T) {
 }
 
 func TestSecretsTree_GetPrimitive_BeforeInitialize(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	primitive := st.GetPrimitive()
 
@@ -152,15 +121,11 @@ func TestSecretsTree_GetPrimitive_BeforeInitialize(t *testing.T) {
 }
 
 func TestSecretsTree_SetSelectionHandler(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	handlerCalled := false
-	handler := func(secret *vault.SecretNode, key string) {
+	handler := func(secret *models.SecretNode, key string) {
 		handlerCalled = true
 	}
 
@@ -174,12 +139,8 @@ func TestSecretsTree_SetSelectionHandler(t *testing.T) {
 }
 
 func TestSecretsTree_SetSelectionHandler_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic with nil handler
 	st.SetSelectionHandler(nil)
@@ -188,12 +149,8 @@ func TestSecretsTree_SetSelectionHandler_Nil(t *testing.T) {
 }
 
 func TestSecretsTree_SetRefreshHandler(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	handlerCalled := false
 	handler := func() {
@@ -210,12 +167,8 @@ func TestSecretsTree_SetRefreshHandler(t *testing.T) {
 }
 
 func TestSecretsTree_SetRefreshHandler_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic with nil handler
 	st.SetRefreshHandler(nil)
@@ -224,12 +177,8 @@ func TestSecretsTree_SetRefreshHandler_Nil(t *testing.T) {
 }
 
 func TestSecretsTree_SetModalHandler(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	handlerCalled := false
 	handler := func(primitive tview.Primitive, show bool) {
@@ -246,12 +195,8 @@ func TestSecretsTree_SetModalHandler(t *testing.T) {
 }
 
 func TestSecretsTree_SetModalHandler_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic with nil handler
 	st.SetModalHandler(nil)
@@ -260,12 +205,8 @@ func TestSecretsTree_SetModalHandler_Nil(t *testing.T) {
 }
 
 func TestSecretsTree_SetValuePanel(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	valuePanel := &SecretsValue{}
 	st.SetValuePanel(valuePanel)
@@ -275,12 +216,8 @@ func TestSecretsTree_SetValuePanel(t *testing.T) {
 }
 
 func TestSecretsTree_SetValuePanel_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic with nil value panel
 	st.SetValuePanel(nil)
@@ -289,12 +226,8 @@ func TestSecretsTree_SetValuePanel_Nil(t *testing.T) {
 }
 
 func TestSecretsTree_SetDialogService(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Mock dialog service
 	mockDialogSvc := &mockDialogService{}
@@ -304,12 +237,8 @@ func TestSecretsTree_SetDialogService(t *testing.T) {
 }
 
 func TestSecretsTree_SetDialogService_Nil(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic with nil dialog service
 	st.SetDialogService(nil)
@@ -318,12 +247,8 @@ func TestSecretsTree_SetDialogService_Nil(t *testing.T) {
 }
 
 func TestSecretsTree_ShowModal(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	handlerCalled := false
 	var receivedPrimitive tview.Primitive
@@ -344,24 +269,16 @@ func TestSecretsTree_ShowModal(t *testing.T) {
 }
 
 func TestSecretsTree_ShowModal_WithoutHandler(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic without modal handler
 	st.showModal(nil, false)
 }
 
 func TestSecretsTree_CreateEmptyTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.tree = tview.NewTreeView()
 
 	err := st.createEmptyTree("Test message")
@@ -372,12 +289,8 @@ func TestSecretsTree_CreateEmptyTree(t *testing.T) {
 }
 
 func TestSecretsTree_CreateEmptyTree_WithDifferentMessages(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.tree = tview.NewTreeView()
 
 	messages := []string{
@@ -395,12 +308,8 @@ func TestSecretsTree_CreateEmptyTree_WithDifferentMessages(t *testing.T) {
 }
 
 func TestSecretsTree_FindParentNode_NilRootNode(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.rootNode = nil
 
 	node := tview.NewTreeNode("test")
@@ -410,12 +319,8 @@ func TestSecretsTree_FindParentNode_NilRootNode(t *testing.T) {
 }
 
 func TestSecretsTree_FindParentNode_SimpleTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Create a simple tree structure
 	root := tview.NewTreeNode("root")
@@ -431,12 +336,8 @@ func TestSecretsTree_FindParentNode_SimpleTree(t *testing.T) {
 }
 
 func TestSecretsTree_FindParentNode_NotFound(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Create a tree
 	root := tview.NewTreeNode("root")
@@ -451,12 +352,8 @@ func TestSecretsTree_FindParentNode_NotFound(t *testing.T) {
 }
 
 func TestSecretsTree_FindParentNode_NestedTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Create a nested tree structure
 	root := tview.NewTreeNode("root")
@@ -478,12 +375,8 @@ func TestSecretsTree_FindParentNode_NestedTree(t *testing.T) {
 }
 
 func TestSecretsTree_Initialize_SetsUpTreeView(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	// TreeView should be configured
@@ -495,15 +388,11 @@ func TestSecretsTree_Initialize_SetsUpTreeView(t *testing.T) {
 }
 
 func TestSecretsTree_ToggleValueMasking_WithValuePanel(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Create a value panel
-	mockValuePanel := NewSecretsValue(cfg, vaultMgr, logger)
+	mockValuePanel := NewSecretsValue(fixtures.cfg, fixtures.interactor, fixtures.logger)
 	mockValuePanel.Initialize()
 	st.SetValuePanel(mockValuePanel)
 
@@ -512,24 +401,16 @@ func TestSecretsTree_ToggleValueMasking_WithValuePanel(t *testing.T) {
 }
 
 func TestSecretsTree_ToggleValueMasking_WithoutValuePanel(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Should not panic without value panel
 	st.toggleValueMasking()
 }
 
 func TestSecretsTree_CopySecretValue_NoNode(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	// Should not panic with no node selected
@@ -537,12 +418,8 @@ func TestSecretsTree_CopySecretValue_NoNode(t *testing.T) {
 }
 
 func TestSecretsTree_CreateSecret_NoNode(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	// Should not panic with no node selected
@@ -550,12 +427,8 @@ func TestSecretsTree_CreateSecret_NoNode(t *testing.T) {
 }
 
 func TestSecretsTree_EditSecret_NoNode(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	// Should not panic with no node selected
@@ -563,12 +436,8 @@ func TestSecretsTree_EditSecret_NoNode(t *testing.T) {
 }
 
 func TestSecretsTree_DeleteSecret_NoNode(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	st.Initialize()
 
 	// Should not panic with no node selected
@@ -576,12 +445,8 @@ func TestSecretsTree_DeleteSecret_NoNode(t *testing.T) {
 }
 
 func TestSecretsTree_HandleNodeChanged_NilReference(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	node := tview.NewTreeNode("test")
 	// No reference set
@@ -591,12 +456,8 @@ func TestSecretsTree_HandleNodeChanged_NilReference(t *testing.T) {
 }
 
 func TestSecretsTree_HandleNodeSelection_NilReference(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	node := tview.NewTreeNode("test")
 	// No reference set
@@ -606,15 +467,11 @@ func TestSecretsTree_HandleNodeSelection_NilReference(t *testing.T) {
 }
 
 func TestSecretsTree_AllSettersCalled(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 
 	// Call all setters
-	st.SetSelectionHandler(func(*vault.SecretNode, string) {})
+	st.SetSelectionHandler(func(*models.SecretNode, string) {})
 	st.SetRefreshHandler(func() {})
 	st.SetModalHandler(func(tview.Primitive, bool) {})
 	st.SetValuePanel(&SecretsValue{})
@@ -628,12 +485,8 @@ func TestSecretsTree_AllSettersCalled(t *testing.T) {
 }
 
 func TestSecretsTree_InitializeCreatesEmptyTree(t *testing.T) {
-	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
-	logger := logrus.New()
-	app := tview.NewApplication()
-
-	st := NewSecretsTree(cfg, vaultMgr, logger, app)
+	fixtures := WithFixtures(t)
+	st := NewSecretsTree(fixtures.cfg, fixtures.interactor, fixtures.logger, fixtures.app)
 	err := st.Initialize()
 
 	assert.NoError(t, err)

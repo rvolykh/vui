@@ -4,19 +4,22 @@ import (
 	"testing"
 
 	"github.com/rivo/tview"
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFormsManager_DeleteSecretForm(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
+
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	callbackCalled := false
 	callback := func() {
@@ -31,11 +34,12 @@ func TestFormsManager_DeleteSecretForm(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_ReturnsModal(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.DeleteSecretForm("/secret/test", func() {})
 
@@ -47,11 +51,12 @@ func TestFormsManager_DeleteSecretForm_ReturnsModal(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_WithNilCallback(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Should not panic with nil callback
 	primitive := fm.DeleteSecretForm("/secret/test", nil)
@@ -61,11 +66,13 @@ func TestFormsManager_DeleteSecretForm_WithNilCallback(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_WithEmptyPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
+
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	primitive := fm.DeleteSecretForm("", func() {})
 
@@ -74,11 +81,12 @@ func TestFormsManager_DeleteSecretForm_WithEmptyPath(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_WithLongPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	longPath := "/secret/very/long/path/to/secret/that/needs/to/be/deleted"
 	primitive := fm.DeleteSecretForm(longPath, func() {})
@@ -88,11 +96,12 @@ func TestFormsManager_DeleteSecretForm_WithLongPath(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_MultipleInvocations(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	// Create multiple delete forms
 	form1 := fm.DeleteSecretForm("/secret/path1", func() {})
@@ -105,11 +114,12 @@ func TestFormsManager_DeleteSecretForm_MultipleInvocations(t *testing.T) {
 
 func TestFormsManager_DeleteSecretForm_WithSpecialCharactersInPath(t *testing.T) {
 	cfg := &config.Config{}
-	vaultMgr := &vault.Manager{}
 	logger := logrus.New()
+	interactor, err := backend.NewInteractor(logger, cfg)
+	require.NoError(t, err)
 	app := tview.NewApplication()
 
-	fm := NewFormsManager(cfg, vaultMgr, logger, app)
+	fm := NewFormsManager(cfg, interactor, logger, app)
 
 	specialPath := "/secret/test-secret_123/item.name"
 	primitive := fm.DeleteSecretForm(specialPath, func() {})

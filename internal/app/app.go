@@ -6,17 +6,17 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/rvolykh/vui/internal/backend"
 	"github.com/rvolykh/vui/internal/config"
 	"github.com/rvolykh/vui/internal/ui"
-	"github.com/rvolykh/vui/internal/vault"
 	"github.com/sirupsen/logrus"
 )
 
 // App represents the main application
 type App struct {
-	config *config.Config
-	vault  *vault.Manager
-	logger *logrus.Logger
+	config     *config.Config
+	interactor backend.Interactor
+	logger     *logrus.Logger
 }
 
 // New creates a new application instance
@@ -43,16 +43,16 @@ func New() (*App, error) {
 	}
 	logger.SetOutput(logFile)
 
-	// Initialize vault manager
-	vaultManager, err := vault.NewManager(cfg, logger)
+	// Initialize interactor
+	interactor, err := backend.NewInteractor(logger, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize vault manager: %w", err)
+		return nil, fmt.Errorf("failed to initialize interactor: %w", err)
 	}
 
 	return &App{
-		config: cfg,
-		vault:  vaultManager,
-		logger: logger,
+		config:     cfg,
+		interactor: interactor,
+		logger:     logger,
 	}, nil
 }
 
@@ -61,7 +61,7 @@ func (a *App) Run() error {
 	a.logger.Info("Starting VUI application")
 
 	// Create UI application
-	uiApp := ui.NewApp(a.config, a.vault, a.logger)
+	uiApp := ui.NewApp(a.config, a.interactor, a.logger)
 
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
