@@ -82,7 +82,7 @@ clean: ## Clean temporary files
 	@ go clean
 	@ rm -f ./vui
 	@ rm -f *.log
-	@ rm -f coverage.*
+	@ rm -f coverage.* ./*.test
 	@ rm -rf ./dist/
 .PHONY: clean
 
