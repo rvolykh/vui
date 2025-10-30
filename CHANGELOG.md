@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/rvolykh/vui/compare/v2.2.0...v2.2.1) (2025-10-30)
+
+
+### Bug Fixes
+
+* Allow to save secrets without key ([b8a473d](https://github.com/rvolykh/vui/commit/b8a473d99c4559c3aa4870be2e67ab90e6946912))
+
 ## [2.2.0](https://github.com/rvolykh/vui/compare/v2.1.0...v2.2.0) (2025-10-30)
 
 
