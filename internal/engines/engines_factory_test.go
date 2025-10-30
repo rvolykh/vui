@@ -38,6 +38,21 @@ func TestEnginesFactory_SetupEngine(t *testing.T) {
 		assert.NotNil(t, engine)
 	})
 
+	t.Run("aws_ssm", func(t *testing.T) {
+		engine, err := factory.SetupEngine("aws/ssm", &config.Profile{
+			Engine:     "aws/ssm",
+			Address:    "http://localhost:8200",
+			AuthMethod: "aws",
+			AuthConfig: config.AuthConfig{
+				AWSAccessKeyID:     "test-key",
+				AWSSecretAccessKey: "test-secret",
+				AWSRegion:          "us-west-2",
+			},
+		})
+		require.NoError(t, err)
+		assert.NotNil(t, engine)
+	})
+
 	t.Run("unknown", func(t *testing.T) {
 		engine, err := factory.SetupEngine("unknown", &config.Profile{
 			Engine:  "unknown",

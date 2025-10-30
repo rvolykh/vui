@@ -37,7 +37,7 @@ services:
     ports:
       - "127.0.0.1:4566:4566"
     environment:
-      - SERVICES=sts,iam,secretsmanager
+      - SERVICES=sts,iam,secretsmanager,ssm
     volumes:
       - "./vol/localstack:/var/lib/localstack"
 

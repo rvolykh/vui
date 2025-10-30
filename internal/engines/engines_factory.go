@@ -25,6 +25,8 @@ func (f *EnginesFactory) SetupEngine(name string, profile *config.Profile) (Secr
 		return vault.NewVaultClient(f.logger, profile)
 	case "aws/secretsmanager":
 		return aws.NewAWSSecretsManagerClient(f.logger, profile)
+	case "aws/ssm":
+		return aws.NewAWSSSMClient(f.logger, profile)
 	default:
 		return nil, fmt.Errorf("unknown engine: %s", name)
 	}
