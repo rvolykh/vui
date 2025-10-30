@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/rvolykh/vui/compare/v2.1.0...v2.2.0) (2025-10-30)
+
+
+### Features
+
+* Add AWS SSM Parameters profile support ([#15](https://github.com/rvolykh/vui/issues/15)) ([d88c6b3](https://github.com/rvolykh/vui/commit/d88c6b322c0b161ead6dc12aa5cff83b4e35b2ec))
+
 ## [2.1.0](https://github.com/rvolykh/vui/compare/v2.0.0...v2.1.0) (2025-10-30)
 
 
