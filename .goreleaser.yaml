@@ -12,6 +12,7 @@ builds:
       - -trimpath
     env:
       - CGO_ENABLED=0
+      - GOEXPERIMENT=greenteagc
     ldflags:
       - -s -w -X main.Version={{.Version}} -X main.BuildTime={{.Date}} -X main.GitCommit={{.ShortCommit}}
     goos:
