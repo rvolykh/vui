@@ -17,11 +17,11 @@ import (
 
 type VaultClient struct {
 	apiClient *api.Client
-	profile   *config.VaultProfile
+	profile   *config.Profile
 	logger    *logrus.Logger
 }
 
-func NewVaultClient(logger *logrus.Logger, profile *config.VaultProfile) (*VaultClient, error) {
+func NewVaultClient(logger *logrus.Logger, profile *config.Profile) (*VaultClient, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = profile.Address
 

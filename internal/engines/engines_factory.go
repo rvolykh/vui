@@ -18,7 +18,7 @@ func NewEnginesFactory(logger *logrus.Logger) *EnginesFactory {
 	}
 }
 
-func (f *EnginesFactory) SetupEngine(name string, profile *config.VaultProfile) (SecretEngine, error) {
+func (f *EnginesFactory) SetupEngine(name string, profile *config.Profile) (SecretEngine, error) {
 	switch name {
 	case "vault":
 		return vault.NewVaultClient(f.logger, profile)

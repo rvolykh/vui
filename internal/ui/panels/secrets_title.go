@@ -73,7 +73,7 @@ func (hp *SecretsTitle) getVaultInfo() string {
 	}
 
 	// Get profile for address
-	if profile, ok := hp.config.Vaults[currentVault]; ok {
+	if profile, ok := hp.config.Profiles[currentVault]; ok {
 		return fmt.Sprintf("[green]%s[white] (%s)", currentVault, profile.Address)
 	}
 

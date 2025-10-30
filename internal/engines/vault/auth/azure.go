@@ -10,7 +10,7 @@ import (
 )
 
 // authenticateWithAzure authenticates using Azure
-func (am *AuthManager) authenticateWithAzure(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithAzure(client *api.Client, profile *config.Profile) error {
 	role := profile.AuthConfig.AzureRole
 	if role == "" {
 		return fmt.Errorf("azure_role is required for Azure authentication")

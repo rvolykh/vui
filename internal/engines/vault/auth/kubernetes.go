@@ -17,7 +17,7 @@ import (
 )
 
 // authenticateWithKubernetes authenticates using Kubernetes
-func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *config.Profile) error {
 	role := profile.AuthConfig.K8sRole
 	if role == "" {
 		return fmt.Errorf("k8s_role is required for Kubernetes authentication")
@@ -58,7 +58,7 @@ func (am *AuthManager) authenticateWithKubernetes(client *api.Client, profile *c
 }
 
 // getKubernetesToken gets Kubernetes service account token
-func (am *AuthManager) getKubernetesToken(profile *config.VaultProfile) (string, error) {
+func (am *AuthManager) getKubernetesToken(profile *config.Profile) (string, error) {
 	homeDir, _ := os.UserHomeDir()
 
 	var (

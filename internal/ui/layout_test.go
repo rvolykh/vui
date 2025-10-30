@@ -12,8 +12,9 @@ import (
 func TestLayoutOfflineMode(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{
+		Profiles: map[string]config.Profile{
 			"default": {
+				Engine:     "vault",
 				Address:    "http://localhost:8200",
 				AuthMethod: "token",
 			},
@@ -41,8 +42,9 @@ func TestLayoutOfflineMode(t *testing.T) {
 func TestLayoutStructure(t *testing.T) {
 	// Test that the layout structure is correct
 	cfg := &config.Config{
-		Vaults: map[string]config.VaultProfile{
+		Profiles: map[string]config.Profile{
 			"default": {
+				Engine:     "vault",
 				Address:    "http://localhost:8200",
 				AuthMethod: "token",
 			},

@@ -118,12 +118,18 @@ func (i *profileInteractor) ReloadConfiguration() error {
 func (i *profileInteractor) initializeConnections() error {
 	factory := engines.NewEnginesFactory(i.logger)
 
-	for name, profile := range i.config.Vaults {
+	for name, profile := range i.config.Profiles {
 		p := profile
 
-		client, err := factory.SetupEngine("vault", &p) // TODO: add support for other engines
+		// Use the engine from the profile, default to "vault" for backward compatibility
+		engine := p.Engine
+		if engine == "" {
+			engine = "vault"
+		}
+
+		client, err := factory.SetupEngine(engine, &p)
 		if err != nil {
-			i.logger.Warnf("Failed to setup engine for profile '%s': %v", name, err)
+			i.logger.Warnf("Failed to setup engine '%s' for profile '%s': %v", engine, name, err)
 			continue
 		}
 

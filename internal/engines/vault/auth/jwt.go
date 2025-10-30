@@ -8,7 +8,7 @@ import (
 )
 
 // authenticateWithJWT authenticates using JWT
-func (am *AuthManager) authenticateWithJWT(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithJWT(client *api.Client, profile *config.Profile) error {
 	role := profile.AuthConfig.JWTRole
 	if role == "" {
 		return fmt.Errorf("jwt_role is required for JWT authentication")

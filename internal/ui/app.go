@@ -207,12 +207,12 @@ func (a *App) refresh() {
 	a.layout.Refresh()
 }
 
-// switchVault shows the vault profiles screen for switching vaults
+// switchVault shows the profiles screen for switching profiles
 func (a *App) switchVault() {
 	a.showVaultProfiles()
 }
 
-// showVaultProfiles shows the vault profiles screen
+// showVaultProfiles shows the profiles screen
 func (a *App) showVaultProfiles() {
 	// Mark that we're on the profiles screen
 	a.onProfilesScreen = true

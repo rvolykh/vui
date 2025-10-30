@@ -13,8 +13,9 @@ func TestNewApp(t *testing.T) {
 	// Create test configuration
 	cfg := &config.Config{
 		App: config.AppConfig{},
-		Vaults: map[string]config.VaultProfile{
+		Profiles: map[string]config.Profile{
 			"test": {
+				Engine:     "vault",
 				Address:    "http://localhost:8200",
 				AuthMethod: "token",
 			},

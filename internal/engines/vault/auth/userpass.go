@@ -8,7 +8,7 @@ import (
 )
 
 // authenticateWithUserpass authenticates using userpass
-func (am *AuthManager) authenticateWithUserpass(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithUserpass(client *api.Client, profile *config.Profile) error {
 	username := profile.AuthConfig.Username
 	if username == "" {
 		return fmt.Errorf("username is required for userpass authentication")

@@ -14,7 +14,8 @@ func TestEnginesFactory_SetupEngine(t *testing.T) {
 	assert.NotNil(t, factory)
 
 	t.Run("vault", func(t *testing.T) {
-		engine, err := factory.SetupEngine("vault", &config.VaultProfile{
+		engine, err := factory.SetupEngine("vault", &config.Profile{
+			Engine:     "vault",
 			Address:    "http://localhost:8200",
 			AuthMethod: "token",
 		})
@@ -23,7 +24,8 @@ func TestEnginesFactory_SetupEngine(t *testing.T) {
 	})
 
 	t.Run("unknown", func(t *testing.T) {
-		engine, err := factory.SetupEngine("unknown", &config.VaultProfile{
+		engine, err := factory.SetupEngine("unknown", &config.Profile{
+			Engine:  "unknown",
 			Address: "http://localhost:8200",
 		})
 		assert.Error(t, err)
