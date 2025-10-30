@@ -68,7 +68,7 @@ ui:
   theme: "dark"
   show_hidden_secrets: false
 
-vaults:
+profiles:
   local:
     address: "http://localhost:8200"
     auth_method: "token"
@@ -82,8 +82,9 @@ For complete example, see [vui.yaml](./configs/vui.yaml)
 
 #### LDAP Authentication
 ```yaml
-vaults:
+profiles:
   ldap_vault:
+    engine: vault
     address: "https://vault.company.com"
     auth_method: "ldap"
     namespace: "production"
@@ -94,7 +95,7 @@ vaults:
 
 #### AWS IAM Authentication
 ```yaml
-vaults:
+profiles:
   aws_vault:
     address: "https://vault.company.com"
     auth_method: "aws"
@@ -108,7 +109,7 @@ vaults:
 
 #### Kubernetes Authentication
 ```yaml
-vaults:
+profiles:
   k8s_vault:
     address: "https://vault.company.com"
     auth_method: "kubernetes"
@@ -120,7 +121,7 @@ vaults:
 
 #### JWT Authentication
 ```yaml
-vaults:
+profiles:
   jwt_vault:
     address: "https://vault.company.com"
     auth_method: "jwt"
@@ -132,7 +133,7 @@ vaults:
 
 #### Certificate Authentication
 ```yaml
-vaults:
+profiles:
   cert_vault:
     address: "https://vault.company.com"
     auth_method: "cert"
@@ -141,6 +142,20 @@ vaults:
       cert_name: "vault-client"
       cert_path: "/path/to/client.crt"
       key_path: "/path/to/client.key"
+```
+
+#### AWS SecretsManager
+
+```yaml
+profiles:
+  aws_secretsmanager:
+    engine: aws/secretsmanager
+    auth_method: "aws"
+    auth_config:
+      aws_access_key_id: "${AWS_ACCESS_KEY_ID}"
+      aws_secret_access_key: "${AWS_SECRET_ACCESS_KEY}"
+      aws_session_token: "${AWS_SESSION_TOKEN}"
+      aws_region: "us-east-1"
 ```
 
 ## Installation
