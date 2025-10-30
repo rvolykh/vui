@@ -317,33 +317,28 @@ func (c *AWSSSMClient) CreateSecret(path string, data map[string]any) error {
 		paramName = "/" + paramName
 	}
 
-	// Convert data map to JSON string
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal secret data: %w", err)
-	}
-
-	// Determine parameter type - if data contains sensitive info, use SecureString
-	// For simplicity, we'll use SecureString for all secrets
-	paramType := "SecureString"
-
-	// Check if the data suggests it's a plain string (single "value" key)
-	if len(data) == 1 {
-		if _, ok := data["value"]; ok {
-			// If it's a simple value, use String type
-			paramType = "String"
-			jsonData = []byte(fmt.Sprintf("%v", data["value"]))
+	var valueString string
+	// Check if data has empty key marker (omitted key case)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		// Store value as plain string (no JSON conversion)
+		valueString = fmt.Sprintf("%v", value)
+	} else {
+		// Convert data map to JSON string
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal secret data: %w", err)
 		}
+		valueString = string(jsonData)
 	}
 
 	input := &ssm.PutParameterInput{
 		Name:      aws.String(paramName),
-		Value:     aws.String(string(jsonData)),
-		Type:      aws.String(paramType),
+		Value:     aws.String(valueString),
+		Type:      aws.String("SecureString"),
 		Overwrite: aws.Bool(false), // Don't overwrite existing parameters
 	}
 
-	_, err = c.client.PutParameterWithContext(ctx, input)
+	_, err := c.client.PutParameterWithContext(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to create parameter '%s': %w", path, err)
 	}
@@ -362,34 +357,33 @@ func (c *AWSSSMClient) UpdateSecret(path string, data map[string]any) error {
 		paramName = "/" + paramName
 	}
 
-	// Convert data map to JSON string
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal secret data: %w", err)
-	}
-
+	paramType := "SecureString"
 	// Get existing parameter to determine type
 	getInput := &ssm.GetParameterInput{
 		Name: aws.String(paramName),
 	}
 	existingParam, err := c.client.GetParameterWithContext(ctx, getInput)
-
-	paramType := "SecureString"
 	if err == nil && existingParam != nil && existingParam.Parameter != nil && existingParam.Parameter.Type != nil {
 		paramType = *existingParam.Parameter.Type
+	}
+
+	var valueString string
+	// Check if data has empty key marker (omitted key case)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		// Store value as plain string (no JSON conversion)
+		valueString = fmt.Sprintf("%v", value)
 	} else {
-		// If parameter doesn't exist or we can't determine type, check data structure
-		if len(data) == 1 {
-			if _, ok := data["value"]; ok {
-				paramType = "String"
-				jsonData = []byte(fmt.Sprintf("%v", data["value"]))
-			}
+		// Convert data map to JSON string
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal secret data: %w", err)
 		}
+		valueString = string(jsonData)
 	}
 
 	input := &ssm.PutParameterInput{
 		Name:      aws.String(paramName),
-		Value:     aws.String(string(jsonData)),
+		Value:     aws.String(valueString),
 		Type:      aws.String(paramType),
 		Overwrite: aws.Bool(true), // Overwrite for updates
 	}
