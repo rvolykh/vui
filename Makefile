@@ -28,6 +28,7 @@ vet: ## Examine source code
 .PHONY: vet
 
 build: export CGO_ENABLED=0
+build: export GOEXPERIMENT=greenteagc
 build: ## Build the application
 	@ go build \
 		-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)" \
