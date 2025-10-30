@@ -37,7 +37,7 @@ func (am *AuthManager) VerifyAuthentication(client *api.Client) error {
 }
 
 // Authenticate authenticates a client using the specified profile
-func (am *AuthManager) Authenticate(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) Authenticate(client *api.Client, profile *config.Profile) error {
 	switch profile.AuthMethod {
 	case "token":
 		return am.authenticateWithToken(client, profile)

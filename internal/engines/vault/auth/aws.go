@@ -11,7 +11,7 @@ import (
 )
 
 // authenticateWithAWS authenticates using AWS
-func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithAWS(client *api.Client, profile *config.Profile) error {
 	accessKeyID := profile.AuthConfig.AWSAccessKeyID
 	if accessKeyID == "" {
 		return fmt.Errorf("aws_access_key_id is required for AWS authentication")

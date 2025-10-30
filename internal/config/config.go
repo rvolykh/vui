@@ -11,9 +11,9 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	App    AppConfig               `mapstructure:"app"`
-	UI     UIConfig                `mapstructure:"ui"`
-	Vaults map[string]VaultProfile `mapstructure:"vaults"`
+	App      AppConfig          `mapstructure:"app"`
+	UI       UIConfig           `mapstructure:"ui"`
+	Profiles map[string]Profile `mapstructure:"profiles"`
 }
 
 // AppConfig contains general application settings
@@ -28,8 +28,9 @@ type UIConfig struct {
 	ShowHiddenSecrets bool   `mapstructure:"show_hidden_secrets"`
 }
 
-// VaultProfile represents a vault connection profile
-type VaultProfile struct {
+// Profile represents a connection profile
+type Profile struct {
+	Engine     string     `mapstructure:"engine"`
 	Address    string     `mapstructure:"address"`
 	CertPath   string     `mapstructure:"cert_path,omitempty"`
 	AuthMethod string     `mapstructure:"auth_method"`
@@ -138,11 +139,12 @@ func setDefaults() {
 	viper.SetDefault("ui.theme", "default")
 	viper.SetDefault("ui.show_hidden_secrets", false)
 
-	// Vaults defaults
-	viper.SetDefault("vaults.local.address", "http://localhost:8200")
-	viper.SetDefault("vaults.local.auth_method", "token")
-	viper.SetDefault("vaults.local.namespace", "")
-	viper.SetDefault("vaults.local.auth_config.token", "${VAULT_TOKEN}")
+	// Profiles defaults
+	viper.SetDefault("profiles.local.engine", "vault")
+	viper.SetDefault("profiles.local.address", "http://localhost:8200")
+	viper.SetDefault("profiles.local.auth_method", "token")
+	viper.SetDefault("profiles.local.namespace", "")
+	viper.SetDefault("profiles.local.auth_config.token", "${VAULT_TOKEN}")
 }
 
 // Save saves the configuration to a file
@@ -157,7 +159,7 @@ func (c *Config) Save() error {
 	// Convert config back to viper format for saving
 	viper.Set("app", c.App)
 	viper.Set("ui", c.UI)
-	viper.Set("vaults", c.Vaults)
+	viper.Set("profiles", c.Profiles)
 
 	return viper.WriteConfigAs(configFile)
 }

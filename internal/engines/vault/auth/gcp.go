@@ -9,7 +9,7 @@ import (
 )
 
 // authenticateWithGCP authenticates using GCP
-func (am *AuthManager) authenticateWithGCP(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithGCP(client *api.Client, profile *config.Profile) error {
 	role := profile.AuthConfig.GCPRole
 	if role == "" {
 		return fmt.Errorf("gcp_role is required for GCP authentication")
@@ -45,7 +45,7 @@ func (am *AuthManager) authenticateWithGCP(client *api.Client, profile *config.V
 }
 
 // getGCPCredentials gets GCP credentials from various sources
-func (am *AuthManager) getGCPCredentials(profile *config.VaultProfile) (string, error) {
+func (am *AuthManager) getGCPCredentials(profile *config.Profile) (string, error) {
 	// Check if credentials are provided directly
 	if credentials := profile.AuthConfig.GCPCredentials; credentials != "" {
 		return credentials, nil

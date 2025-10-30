@@ -8,7 +8,7 @@ import (
 )
 
 // authenticateWithToken authenticates using a token
-func (am *AuthManager) authenticateWithToken(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithToken(client *api.Client, profile *config.Profile) error {
 	token := profile.AuthConfig.Token
 	if token == "" {
 		return fmt.Errorf("token is required for token authentication")

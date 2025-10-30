@@ -8,7 +8,7 @@ import (
 )
 
 // authenticateWithCert authenticates using certificates
-func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithCert(client *api.Client, profile *config.Profile) error {
 	certName := profile.AuthConfig.CertName
 	if certName == "" {
 		return fmt.Errorf("cert_name is required for cert authentication")

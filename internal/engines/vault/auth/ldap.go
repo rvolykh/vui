@@ -8,7 +8,7 @@ import (
 )
 
 // authenticateWithLDAP authenticates using LDAP
-func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.VaultProfile) error {
+func (am *AuthManager) authenticateWithLDAP(client *api.Client, profile *config.Profile) error {
 	username := profile.AuthConfig.Username
 	if username == "" {
 		return fmt.Errorf("username is required for LDAP authentication")

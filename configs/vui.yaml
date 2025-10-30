@@ -6,8 +6,9 @@ ui:
   theme: "default"
   show_hidden_secrets: false
 
-vaults:
+profiles:
   vault-token:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "token"
     namespace: ""
@@ -15,6 +16,7 @@ vaults:
       token: "${VAULT_TOKEN}"
 
   vault-ldap:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "ldap"
     namespace: ""
@@ -23,6 +25,7 @@ vaults:
       password: "${LDAP_PASSWORD}"
 
   vault-aws:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "aws"
     namespace: ""
@@ -33,6 +36,7 @@ vaults:
       aws_session_token: "${AWS_SESSION_TOKEN}"
 
   vault-k8s:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "kubernetes"
     namespace: ""
@@ -43,6 +47,7 @@ vaults:
       k8s_ttl: 3600
 
   vault-oidc:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "oidc"
     namespace: ""
@@ -50,6 +55,7 @@ vaults:
       oidc_role: "vui-oidc-role"
 
   vault-jwt:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "jwt"
     namespace: ""
@@ -58,6 +64,7 @@ vaults:
       jwt: "${JWT}"
 
   vault-userpass:
+    engine: "vault"
     address: "http://localhost:8200"
     auth_method: "userpass"
     namespace: ""
@@ -66,6 +73,7 @@ vaults:
       password: "${USERPASS_PASSWORD}"
 
   vault-cert:
+    engine: "vault"
     address: "https://localhost:8208"
     cert_path: "./sandbox/files/vault.crt"
     auth_method: "cert"
@@ -76,6 +84,7 @@ vaults:
       cert_key_path: "./sandbox/vol/certs/client.key"
 
   vault-azure-todo:
+    engine: "vault"
     address: "http://localhost:8201"
     auth_method: "azure"
     namespace: ""

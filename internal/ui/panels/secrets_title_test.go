@@ -102,7 +102,7 @@ func TestSecretsTitle_GetVaultInfo_NoActiveVault(t *testing.T) {
 
 func TestSecretsTitle_GetVaultInfo_WithVaultNoProfile(t *testing.T) {
 	fixtures := WithFixtures(t)
-	fixtures.cfg.Vaults = map[string]config.VaultProfile{}
+	fixtures.cfg.Profiles = map[string]config.Profile{}
 	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	// With uninitialized vault manager, GetActiveVault returns empty string
@@ -113,8 +113,9 @@ func TestSecretsTitle_GetVaultInfo_WithVaultNoProfile(t *testing.T) {
 
 func TestSecretsTitle_GetVaultInfo_WithProfile(t *testing.T) {
 	fixtures := WithFixtures(t)
-	fixtures.cfg.Vaults = map[string]config.VaultProfile{
+	fixtures.cfg.Profiles = map[string]config.Profile{
 		"test-vault": {
+			Engine:  "vault",
 			Address: "https://vault.example.com",
 		},
 	}
@@ -367,7 +368,7 @@ func TestSecretsTitle_Initialize_WithNilVaultManager(t *testing.T) {
 
 func TestSecretsTitle_GetVaultInfo_EmptyVaultsMap(t *testing.T) {
 	fixtures := WithFixtures(t)
-	fixtures.cfg.Vaults = map[string]config.VaultProfile{}
+	fixtures.cfg.Profiles = map[string]config.Profile{}
 	st := NewSecretsTitle(fixtures.cfg, fixtures.interactor, fixtures.logger)
 
 	info := st.getVaultInfo()
@@ -400,8 +401,9 @@ func TestSecretsTitle_UpdateVaultInfo_BeforeInitialize(t *testing.T) {
 
 func TestSecretsTitle_GetVaultInfo_WithAddress(t *testing.T) {
 	fixtures := WithFixtures(t)
-	fixtures.cfg.Vaults = map[string]config.VaultProfile{
+	fixtures.cfg.Profiles = map[string]config.Profile{
 		"prod": {
+			Engine:  "vault",
 			Address: "https://vault.prod.example.com",
 		},
 	}

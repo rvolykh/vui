@@ -166,10 +166,10 @@ func (vpp *ProfilesTable) loadProfiles() error {
 	// Clear existing items
 	vpp.table.Clear()
 
-	// Get available vaults
+	// Get available profiles
 	profiles := vpp.interactor.Profiles().ListConnections()
 
-	// Sort vaults by name (ascending)
+	// Sort profiles by name (ascending)
 	sort.Strings(profiles)
 	vpp.vaultNames = profiles
 
@@ -185,7 +185,7 @@ func (vpp *ProfilesTable) loadProfiles() error {
 	}
 
 	if len(profiles) == 0 {
-		// Show a message when no vaults are configured
+		// Show a message when no profiles are configured
 		cell := tview.NewTableCell("No profiles configured").
 			SetAlign(tview.AlignCenter).
 			SetExpansion(1)

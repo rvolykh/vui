@@ -17,8 +17,9 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, "info", config.App.LogLevel)
 	assert.Equal(t, false, config.UI.ShowHiddenSecrets)
 	assert.Equal(t, "default", config.UI.Theme)
-	assert.Equal(t, "http://localhost:8200", config.Vaults["local"].Address)
-	assert.Equal(t, "token", config.Vaults["local"].AuthMethod)
+	assert.Equal(t, "http://localhost:8200", config.Profiles["local"].Address)
+	assert.Equal(t, "token", config.Profiles["local"].AuthMethod)
+	assert.Equal(t, "vault", config.Profiles["local"].Engine)
 }
 
 func TestConfigSave(t *testing.T) {
@@ -26,8 +27,9 @@ func TestConfigSave(t *testing.T) {
 		UI: UIConfig{
 			Theme: "light",
 		},
-		Vaults: map[string]VaultProfile{
+		Profiles: map[string]Profile{
 			"default": {
+				Engine:     "vault",
 				Address:    "https://test.vault.com",
 				AuthMethod: "token",
 			},

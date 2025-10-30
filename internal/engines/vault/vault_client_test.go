@@ -14,7 +14,8 @@ func TestVaultClient(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 
-	profile := &config.VaultProfile{
+	profile := &config.Profile{
+		Engine:  "vault",
 		Address: "http://localhost:8200",
 	}
 
