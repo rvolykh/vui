@@ -8,6 +8,7 @@ import (
 
 	"github.com/rivo/tview"
 	"github.com/rvolykh/vui/internal/ui/common"
+	"github.com/rvolykh/vui/internal/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -117,15 +118,18 @@ func (fb *KeyValueFormBuilder) rebuildForm() {
 			fb.logger.Infof("rebuildForm: Processing pair %d/%d: key='%s'", idx+1, len(keys), k)
 			v := fb.keyValuePairs[k]
 
+			// Display key label - show "(no key)" for empty keys
+			displayKey := utils.Coalesce(k, "(no key)")
+
 			if fb.config.ShowDeleteKeys {
 				fb.logger.Infof("rebuildForm: Adding delete button for key='%s'", k)
 				// For edit mode: show as input field with delete button
 				// Create a copy of k for the closure
 				key := k
 
-				valueField := tview.NewTextArea().SetLabel(key).SetText(v, true)
+				valueField := tview.NewTextArea().SetLabel(displayKey).SetText(v, true)
 				form.AddFormItem(valueField)
-				form.AddButton("Delete "+key, fb.createDeleteKeyHandler(key))
+				form.AddButton("Delete "+displayKey, fb.createDeleteKeyHandler(key))
 			} else {
 				displayValue := strings.ReplaceAll(v, "\n", "\\n")
 				if len(displayValue) > 40 {
@@ -134,7 +138,7 @@ func (fb *KeyValueFormBuilder) rebuildForm() {
 
 				fb.logger.Infof("rebuildForm: Adding read-only display for key='%s'", k)
 				// For create mode: show as read-only text
-				form.AddTextView("  • "+k, displayValue, 0, 1, false, false)
+				form.AddTextView("  • "+displayKey, displayValue, 0, 1, false, false)
 			}
 		}
 		fb.logger.Info("rebuildForm: Finished processing existing pairs")
@@ -202,14 +206,14 @@ func (fb *KeyValueFormBuilder) createAddKeyValueHandler() func() {
 		value := valueField.GetText()
 		fb.logger.Infof("Retrieved key='%s', value length=%d", key, len(value))
 
-		if key == "" {
-			fb.logger.Warn("Key cannot be empty")
-			return
-		}
-
 		if value == "" {
 			fb.logger.Warn("Value cannot be empty")
 			return
+		}
+
+		// Allow empty key when value is present - use empty string as marker
+		if key == "" {
+			fb.logger.Info("Key is empty but value is present - will use empty key marker")
 		}
 
 		// Add to the pairs map
@@ -250,9 +254,10 @@ func (fb *KeyValueFormBuilder) createSaveHandler() func() {
 			key := strings.TrimSpace(keyField.GetText())
 			value := valueField.GetText()
 
-			if key != "" && value != "" {
+			// Allow empty key when value is present
+			if value != "" {
 				fb.keyValuePairs[key] = value
-				fb.logger.Infof("Auto-added new key-value pair before save: %s", key)
+				fb.logger.Infof("Auto-added new key-value pair before save: key='%s'", key)
 			}
 		}
 

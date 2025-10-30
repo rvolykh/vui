@@ -303,18 +303,26 @@ func (c *AWSClient) CreateSecret(path string, data map[string]any) error {
 
 	secretName := strings.Trim(path, "/")
 
-	// Convert data map to JSON string
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal secret data: %w", err)
+	var secretString string
+	// Check if data has empty key marker (omitted key case)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		// Store value as plain string (no JSON conversion)
+		secretString = fmt.Sprintf("%v", value)
+	} else {
+		// Convert data map to JSON string
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal secret data: %w", err)
+		}
+		secretString = string(jsonData)
 	}
 
 	input := &secretsmanager.CreateSecretInput{
 		Name:         aws.String(secretName),
-		SecretString: aws.String(string(jsonData)),
+		SecretString: aws.String(secretString),
 	}
 
-	_, err = c.client.CreateSecretWithContext(ctx, input)
+	_, err := c.client.CreateSecretWithContext(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to create secret '%s': %w", path, err)
 	}
@@ -329,18 +337,26 @@ func (c *AWSClient) UpdateSecret(path string, data map[string]any) error {
 
 	secretName := strings.Trim(path, "/")
 
-	// Convert data map to JSON string
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("failed to marshal secret data: %w", err)
+	var secretString string
+	// Check if data has empty key marker (omitted key case)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		// Store value as plain string (no JSON conversion)
+		secretString = fmt.Sprintf("%v", value)
+	} else {
+		// Convert data map to JSON string
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal secret data: %w", err)
+		}
+		secretString = string(jsonData)
 	}
 
 	input := &secretsmanager.UpdateSecretInput{
 		SecretId:     aws.String(secretName),
-		SecretString: aws.String(string(jsonData)),
+		SecretString: aws.String(secretString),
 	}
 
-	_, err = c.client.UpdateSecretWithContext(ctx, input)
+	_, err := c.client.UpdateSecretWithContext(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to update secret '%s': %w", path, err)
 	}

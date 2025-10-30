@@ -185,6 +185,13 @@ func (c *VaultClient) CreateSecret(path string, data map[string]any) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Handle empty key marker (defensive check - handler should already transform for Vault)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		data = map[string]any{
+			"value": value,
+		}
+	}
+
 	// For KV v2, we need to wrap the data
 	secretData := map[string]any{
 		"data": data,
@@ -202,6 +209,13 @@ func (c *VaultClient) CreateSecret(path string, data map[string]any) error {
 func (c *VaultClient) UpdateSecret(path string, data map[string]any) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+
+	// Handle empty key marker (defensive check - handler should already transform for Vault)
+	if value, hasEmptyKey := data[""]; hasEmptyKey && len(data) == 1 {
+		data = map[string]any{
+			"value": value,
+		}
+	}
 
 	// For KV v2, we need to wrap the data
 	secretData := map[string]any{
