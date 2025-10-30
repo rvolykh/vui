@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/rvolykh/vui/compare/v1.0.0...v2.0.0) (2025-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* Replace Vaults with Profiles in config ([#11](https://github.com/rvolykh/vui/issues/11))
+
+### Features
+
+* Replace Vaults with Profiles in config ([#11](https://github.com/rvolykh/vui/issues/11)) ([0f22ee8](https://github.com/rvolykh/vui/commit/0f22ee89a12a27964067466c054813968f89f154))
+
 ## 1.0.0 (2025-10-23)
 
 
