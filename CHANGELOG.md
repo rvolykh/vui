@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/rvolykh/vui/compare/v2.0.0...v2.1.0) (2025-10-30)
+
+
+### Features
+
+* Add AWS SecretsManager profile support ([#13](https://github.com/rvolykh/vui/issues/13)) ([fab712b](https://github.com/rvolykh/vui/commit/fab712b3c2de72672a89296e8bcea10af30eb192))
+
 ## [2.0.0](https://github.com/rvolykh/vui/compare/v1.0.0...v2.0.0) (2025-10-30)
 
 
