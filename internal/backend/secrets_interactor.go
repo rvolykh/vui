@@ -16,15 +16,91 @@ type SecretsInteractor interface {
 type secretsInteractor struct {
 	name   string
 	logger *logrus.Logger
-	engines.SecretClient
+	client engines.SecretClient
+	cache  *secretCache
 }
 
 func newSecretsInteractor(logger *logrus.Logger, name string, client engines.SecretClient) SecretsInteractor {
 	return &secretsInteractor{
-		logger:       logger,
-		name:         name,
-		SecretClient: client,
+		logger: logger,
+		name:   name,
+		client: client,
+		cache:  newSecretCache(),
 	}
+}
+
+// ListSecrets retrieves secrets at the given path, using cache if available
+func (i *secretsInteractor) ListSecrets(path string) ([]*models.SecretNode, error) {
+	// Check cache
+	if secrets, found := i.cache.GetListSecrets(path); found {
+		return secrets, nil
+	}
+
+	// Cache miss, fetch from underlying client
+	secrets, err := i.client.ListSecrets(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	i.cache.SetListSecrets(path, secrets)
+
+	return secrets, nil
+}
+
+// GetSecret retrieves a secret at the given path, using cache if available
+func (i *secretsInteractor) GetSecret(path string) (*models.SecretNode, error) {
+	// Check cache
+	if secret, found := i.cache.GetSecret(path); found {
+		return secret, nil
+	}
+
+	// Cache miss, fetch from underlying client
+	secret, err := i.client.GetSecret(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	i.cache.SetSecret(path, secret)
+
+	return secret, nil
+}
+
+// CreateSecret creates a secret and invalidates relevant cache entries
+func (i *secretsInteractor) CreateSecret(path string, data map[string]any) error {
+	err := i.client.CreateSecret(path, data)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache for this path and parent paths
+	i.cache.Invalidate(path)
+	return nil
+}
+
+// UpdateSecret updates a secret and invalidates relevant cache entries
+func (i *secretsInteractor) UpdateSecret(path string, data map[string]any) error {
+	err := i.client.UpdateSecret(path, data)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache for this path and parent paths
+	i.cache.Invalidate(path)
+	return nil
+}
+
+// DeleteSecret deletes a secret and invalidates relevant cache entries
+func (i *secretsInteractor) DeleteSecret(path string) error {
+	err := i.client.DeleteSecret(path)
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache for this path and parent paths
+	i.cache.Invalidate(path)
+	return nil
 }
 
 func (i *secretsInteractor) BuildTree(rootPath string, maxDepth int) (*models.SecretNode, error) {
