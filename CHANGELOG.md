@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/rvolykh/vui/compare/v2.2.1...v2.3.0) (2025-10-31)
+
+
+### Features
+
+* Add caching ([#19](https://github.com/rvolykh/vui/issues/19)) ([95ae818](https://github.com/rvolykh/vui/commit/95ae818a202922f8731488abdd957ec3c2c39e71))
+
 ## [2.2.1](https://github.com/rvolykh/vui/compare/v2.2.0...v2.2.1) (2025-10-30)
 
 
